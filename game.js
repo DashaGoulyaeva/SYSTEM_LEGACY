@@ -1,37 +1,87 @@
-// game.js - ядро игры SYSTEM_LEGACY
-// Этот код выполнится, когда страница полностью загрузится
+// game.js - Ядро игры SYSTEM_LEGACY
+console.log('Терминал HYPERION-7 загружен.');
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Терминал HYPERION-7 загружен.');
+// ====================
+// 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ СОСТОЯНИЯ
+// ====================
+let stability = 85.0;      // Текущая стабильность (в процентах)
+let memory = 0.0;          // Накопленная память (в "единицах")
+let knowledge = 0;         // Знания (престиж-валюта, неизменна при сбросе)
 
-    // Получаем ссылки на ключевые элементы интерфейса
-    const stabilityBar = document.getElementById('stability-bar');
-    const stabilityText = document.getElementById('stability-text');
-    const memoryText = document.getElementById('memory-text');
-    const scanButton = document.getElementById('scan-btn');
-    const logContent = document.getElementById('log-content');
+// ====================
+// 2. ССЫЛКИ НА ЭЛЕМЕНТЫ ИНТЕРФЕЙСА
+// ====================
+const stabilityBar = document.getElementById('stability-bar');
+const stabilityText = document.getElementById('stability-text');
+const memoryText = document.getElementById('memory-text');
+const scanButton = document.getElementById('scan-btn');
+const logContent = document.getElementById('log-content');
 
-    // Пример функции для добавления записей в лог
-    function addLog(message) {
-        const logEntry = document.createElement('p');
-        logEntry.textContent = `> ${message}`;
-        logContent.appendChild(logEntry);
-        // Автопрокрутка вниз
-        logContent.scrollTop = logContent.scrollHeight;
-        console.log('LOG:', message); // Также выводим в консоль браузера
+// ====================
+// 3. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ЛОГА
+// ====================
+function addLog(message) {
+    const logEntry = document.createElement('p');
+    logEntry.textContent = `> ${message}`;
+    logContent.appendChild(logEntry);
+    // Автопрокрутка лога вниз
+    logContent.scrollTop = logContent.scrollHeight;
+    console.log('LOG:', message);
+}
+
+// ====================
+// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ИНТЕРФЕЙСА
+// ====================
+function updateInterface() {
+    // Обновляем прогресс-бар и текст стабильности
+    stabilityBar.value = stability;
+    stabilityText.textContent = Math.floor(stability) + '%'; // Округляем для красоты
+
+    // Обновляем отображение памяти (округляем до сотых)
+    memoryText.textContent = memory.toFixed(2) + ' ГБ';
+}
+
+// ====================
+// 5. ФУНКЦИЯ ИГРОВОГО ЦИКЛА (TICK)
+// ====================
+function gameTick() {
+    // 5.1. Уменьшаем стабильность на 0.5% за тик
+    stability = Math.max(0, stability - 0.5); // Math.max не даст уйти ниже 0
+
+    // 5.2. Увеличиваем память на 1.2 единицы за тик (базовая генерация)
+    memory += 1.2;
+
+    // 5.3. Обновляем цифры на экране
+    updateInterface();
+
+    // 5.4. (Дополнительно) Если стабильность упала до 0, пишем в лог
+    if (stability <= 0) {
+        addLog('ВНИМАНИЕ: Стабильность на нуле. Требуется глубокая дефрагментация.');
+        stability = 0; // Фиксируем на нуле
     }
+}
 
-    // Простейший обработчик для кнопки SCAN (для демонстрации)
-    scanButton.addEventListener('click', function() {
-        addLog('Запуск сканирования узлов...');
-        // Временный эффект: сканирование немного тратит стабильность
-        let currentStability = parseInt(stabilityBar.value);
-        currentStability = Math.max(0, currentStability - 1); // Уменьшаем на 1%, но не ниже 0
-        stabilityBar.value = currentStability;
-        stabilityText.textContent = currentStability + '%';
-        addLog('Сканирование завершено. Стабильность понижена на 1%.');
-    });
+// ====================
+// 6. ЗАПУСК ЦИКЛА И ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА
+// ====================
+// Запускаем игровой тик каждую секунду (1000 миллисекунд)
+const gameInterval = setInterval(gameTick, 1000);
+// Сразу обновляем интерфейс, чтобы отобразились начальные значения
+updateInterface();
+// Приветственное сообщение
+addLog('Игровой цикл активирован. Система активна.');
 
-    // Приветственное сообщение
-    addLog('Инициализация игрового ядра... ВСЕ СИСТЕМЫ В НОРМЕ.');
+// ====================
+// 7. ТЕСТОВЫЙ ОБРАБОТЧИК ДЛЯ КНОПКИ SCAN (пока простой)
+// ====================
+scanButton.addEventListener('click', function() {
+    addLog('Сканирование... Обнаружено: ручное вмешательство оператора.');
+    // Временный эффект: сканирование тратит 5 единиц памяти
+    if (memory >= 5) {
+        memory -= 5;
+        updateInterface(); // Обновляем интерфейс после изменения памяти
+        addLog('Память затрачена на углубленный анализ. Стабильность системы не затронута.');
+    } else {
+        addLog('ОШИБКА: Недостаточно памяти для выполнения операции.');
+    }
 });

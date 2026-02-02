@@ -1,0 +1,139 @@
+/* Сброс отступов и задание базовых стилей */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Основные стили страницы */
+body {
+    background-color: #0a0a0a; /* Глубокий чёрный фон */
+    color: #00ff00;           /* Ярко-зелёный текст */
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Контейнер терминала */
+.terminal {
+    background-color: #111;
+    border: 1px solid #333;
+    border-radius: 5px;
+    padding: 30px;
+    max-width: 800px;
+    width: 100%;
+}
+
+/* Заголовки */
+h1 {
+    color: #00cc00;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    font-size: 1.8em;
+}
+.status {
+    color: #aaa;
+    margin-bottom: 25px;
+}
+h3 {
+    color: #00cc00;
+    margin-bottom: 10px;
+}
+
+/* Секция ресурсов */
+.resources {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 30px;
+}
+.resource {
+    flex: 1;
+}
+.resource label {
+    display: block;
+    color: #7cfc00; /* Салатовый для подписей */
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+/* Стилизация прогресс-бара */
+progress {
+    width: 100%;
+    height: 25px;
+    background-color: #222;
+    border: 1px solid #333;
+}
+/* Цвет заполненной части (работает в Chrome/Edge) */
+progress::-webkit-progress-bar { background: #222; }
+progress::-webkit-progress-value { background: #00aa00; }
+
+/* Отображение числовых значений */
+#stability-text, .value {
+    display: block;
+    text-align: center;
+    font-size: 1.8em;
+    font-weight: bold;
+    margin-top: 5px;
+    color: #fff;
+}
+
+/* Панель кнопок */
+.controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+.cmd-btn {
+    background-color: #222;
+    color: #00ff00;
+    border: 1px solid #444;
+    padding: 15px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1em;
+    cursor: pointer;
+    flex: 1;
+    min-width: 140px;
+    transition: background 0.2s;
+    text-transform: uppercase;
+}
+.cmd-btn:hover {
+    background-color: #2a2a2a;
+}
+.cmd-btn:disabled {
+    background-color: #111;
+    color: #555;
+    border-color: #222;
+    cursor: not-allowed;
+}
+.cmd-btn.danger {
+    color: #ff5555;
+    border-color: #663333;
+}
+
+/* Область системного лога */
+.log {
+    background-color: #0a0a0a;
+    border: 1px solid #333;
+    padding: 20px;
+    border-radius: 3px;
+}
+#log-content {
+    font-size: 0.95em;
+    max-height: 300px;
+    overflow-y: auto; /* Добавляет прокрутку, если логов много */
+}
+#log-content p {
+    margin-bottom: 8px;
+    color: #ccc;
+    border-bottom: 1px dashed #222;
+    padding-bottom: 8px;
+}
+#log-content p:last-child {
+    border-bottom: none;
+}

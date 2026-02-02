@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSTEM_LEGACY — Терминал</title>
+    <!-- Подключаем наш файл стилей и шрифт -->
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Главный контейнер -->
+    <div class="terminal">
+        <!-- Заголовок и статус -->
+        <header>
+            <h1>> СИСТЕМА: HYPERION-7</h1>
+            <p class="status">Статус: <span id="sys-status">АКТИВНА</span></p>
+        </header>
+
+        <!-- Блок ресурсов: Стабильность и Память -->
+        <section class="resources">
+            <div class="resource">
+                <label>СТАБИЛЬНОСТЬ</label>
+                <!-- Прогресс-бар. value="85" max="100" = 85% -->
+                <progress id="stability-bar" value="85" max="100"></progress>
+                <span id="stability-text">85%</span>
+            </div>
+            <div class="resource">
+                <label>ПАМЯТЬ</label>
+                <!-- Для памяти пока используем текстовый блок -->
+                <div class="value" id="memory-text">0 ГБ</div>
+            </div>
+        </section>
+
+        <!-- Панель основных команд-кнопок -->
+        <section class="controls">
+            <button id="scan-btn" class="cmd-btn">SCAN</button>
+            <button id="fix-btn" class="cmd-btn" disabled>FIX</button>
+            <button id="analyze-btn" class="cmd-btn" disabled>ANALYZE</button>
+            <button id="reset-btn" class="cmd-btn danger">DEEP_DEFRAG</button>
+        </section>
+
+        <!-- Область системного лога (здесь будут появляться сообщения) -->
+        <section class="log">
+            <h3>> СИСТЕМНЫЙ ЖУРНАЛ:</h3>
+            <div id="log-content">
+                <!-- Первоначальные записи в логе -->
+                <p>> Инициализация терминала... УСПЕХ.</p>
+                <p>> Добро пожаловать, Оператор. Система ожидает команд.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Подключаем JavaScript в конце тела -->
+    <script src="game.js"></script>
+</body>
+</html>

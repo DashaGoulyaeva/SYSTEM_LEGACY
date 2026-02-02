@@ -9,6 +9,9 @@ let memory = 0.0;              // Накопленная память (в "ед�
 let knowledge = 0;             // Знания (престиж-валюта, неизменна при сбросе)
 let selectedProcessId = null;  // ID выбранного процесса (для FIX, STATUS)
 let scannedProcessId = null;   // ID процесса, найденного сканированием (для подсказки)
+// Система дефрагментации
+let defragCounter = 0;        // Счётчик выполненных дефрагментаций
+let isDefragAvailable = false; // Доступна ли дефрагментация сейчас
 
 // ====================
 // 1.2. МОДЕЛЬ ПРОЦЕССОВ (СЕТКА 3X3)
@@ -36,7 +39,9 @@ function saveGame() {
         memory: memory,
         knowledge: knowledge,
         processes: processes,
-        selectedProcessId: selectedProcessId
+        selectedProcessId: selectedProcessId,
+        defragCounter: defragCounter,
+        isDefragAvailable: isDefragAvailable
     };
     localStorage.setItem('systemLegacySave', JSON.stringify(gameState));
     console.log('Игра сохранена.');
@@ -52,6 +57,8 @@ function loadGame() {
             knowledge = gameState.knowledge || 0;
             processes = gameState.processes || [];
             selectedProcessId = gameState.selectedProcessId || null;
+            defragCounter = gameState.defragCounter || 0;
+            isDefragAvailable = gameState.isDefragAvailable || false;
             
             // Восстанавливаем методы объектов, если они были утеряны при сериализации
             if (processes.length > 0) {
@@ -136,12 +143,27 @@ function gameTick() {
     updateInterface();
     renderProcessGrid(); // Перерисовываем сетку каждый тик!
 
+    // 5.5. ПРОВЕРКА КРИТИЧЕСКОГО СОСТОЯНИЯ
     if (stability <= 0) {
         addLog('ВНИМАНИЕ: Стабильность на нуле. Требуется глубокая дефрагментация.');
         stability = 0;
     }
-}
-
+    
+    // 5.6. ПРОВЕРКА ДОСТУПНОСТИ ДЕФРАГМЕНТАЦИИ
+    // Дефрагментация доступна, если стабильность ниже 10%
+    isDefragAvailable = (stability < 10);
+    
+    // Визуальная индикация доступности кнопки DEEP_DEFRAG
+    if (resetButton) {
+        if (isDefragAvailable) {
+            resetButton.style.borderColor = '#ff5555';
+            resetButton.style.color = '#ff5555';
+        } else {
+            resetButton.style.borderColor = '#663333';
+            resetButton.style.color = '#ff5555';
+        }
+    }
+} // <-- ЭТА ЗАКРЫВАЮЩАЯ ФИГУРНАЯ СКОБКА ВАЖНА!
 // ====================
 // ИНИЦИАЛИЗАЦИЯ ПРОЦЕССОВ
 // ====================
@@ -319,12 +341,97 @@ analyzeButton.addEventListener('click', function() {
 });
 
 // ====================
-// 11. ЗАГЛУШКА ДЛЯ КНОПКИ DEEP_DEFRAG
+// 11. ЛОГИКА СИСТЕМЫ ДЕФРАГМЕНТАЦИИ (DEEP_DEFRAG)
 // ====================
-resetButton.addEventListener('click', function() {
-    addLog('ИНИЦИИРОВАНА ГЛУБОКАЯ ДЕФРАГМЕНТАЦИЯ... (функция в разработке)');
-    addLog('Требуется стабильность < 10% для активации.');
-});
+function performDeepDefrag() {
+    // Проверяем условия для дефрагментации
+    if (!isDefragAvailable) {
+        addLog('ОТКАЗ: Дефрагментация доступна только при стабильности < 10%.');
+        return;
+    }
+    
+    if (stability >= 10) {
+        addLog('ОТКАЗ: Стабильность слишком высока для безопасной дефрагментации.');
+        return;
+    }
+    
+    // ПОДТВЕРЖДЕНИЕ ДЕЙСТВИЯ (можно закомментировать на время тестов)
+    const userConfirmed = confirm(
+        `ГЛУБОКАЯ ДЕФРАГМЕНТАЦИЯ #${defragCounter + 1}\n\n` +
+        `Это сбросит стабильность и память, но сохранит Знания.\n` +
+        `Вы уверены?`
+    );
+    
+    if (!userConfirmed) {
+        addLog('Дефрагментация отменена оператором.');
+        return;
+    }
+    
+    addLog('='.repeat(50));
+    addLog(`ИНИЦИИРОВАНА ГЛУБОКАЯ ДЕФРАГМЕНТАЦИЯ #${defragCounter + 1}`);
+    
+    // РАСЧЁТ НАГРАДЫ ЗА ЦИКЛ
+    const baseReward = 5; // Базовое количество знаний за цикл
+    let bonusReward = 0;
+    
+    // Бонусы за эффективность цикла
+    const maxMemoryBonus = Math.floor(memory / 100); // +1 знание за каждые 100 ГБ
+    const processBonus = processes.filter(p => p.health > 80).length; // +1 за каждый здоровый процесс
+    
+    bonusReward = maxMemoryBonus + processBonus;
+    const totalKnowledgeGain = baseReward + bonusReward;
+    
+    // ПРИМЕНЕНИЕ ИЗМЕНЕНИЙ
+    // 1. Увеличиваем счётчик дефрагментаций
+    defragCounter++;
+    
+    // 2. Начисляем знания
+    knowledge += totalKnowledgeGain;
+    
+    // 3. Сохраняем для отчёта старые значения
+    const oldMemory = memory;
+    const oldStability = stability;
+    
+    // 4. СБРОС СОСТОЯНИЯ СИСТЕМЫ К НАЧАЛЬНОМУ
+    stability = 85.0; // Возвращаем к начальному значению
+    memory = 0.0;     // Обнуляем память
+    
+    // 5. СБРОС ВСЕХ ПРОЦЕССОВ (восстанавливаем здоровье)
+    processes.forEach(process => {
+        process.health = 100;
+        process.isBroken = false;
+        process.isActive = true;
+    });
+    
+    // 6. Сброс выделений
+    selectedProcessId = null;
+    scannedProcessId = null;
+    
+    // 7. ОТЧЁТ О РЕЗУЛЬТАТАХ
+    addLog(`ЗАВЕРШЕНО. ЦИКЛ #${defragCounter}`);
+    addLog(`─ Стабильность: ${oldStability.toFixed(1)}% → ${stability}%`);
+    addLog(`─ Память: ${oldMemory.toFixed(1)} ГБ → ${memory} ГБ`);
+    addLog(`─ Здоровых процессов: ${processBonus}/9`);
+    addLog(`─ Получено Знаний: +${totalKnowledgeGain} (база: ${baseReward}, бонус: ${bonusReward})`);
+    addLog(`─ Всего Знаний: ${knowledge}`);
+    addLog('='.repeat(50));
+    
+    // 8. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+    updateInterface();
+    renderProcessGrid();
+    
+    // 9. ОБНОВЛЕНИЕ СОСТОЯНИЯ КНОПКИ (дефрагментация снова недоступна)
+    isDefragAvailable = false;
+    if (resetButton) {
+        resetButton.style.borderColor = '#663333';
+    }
+    
+    // 10. Сохранение нового состояния
+    saveGame();
+}
+
+// Связываем функцию с кнопкой DEEP_DEFRAG
+resetButton.addEventListener('click', performDeepDefrag);
 
 // ====================
 // 6. ЗАПУСК ЦИКЛА И ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА

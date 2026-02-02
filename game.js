@@ -37,6 +37,34 @@ function loadGame() {
 }
 
 // ====================
+// 1.2. МОДЕЛЬ ПРОЦЕССОВ (СЕТКА 3X3)
+// ====================
+let processes = []; // Массив, где будут храниться все процессы
+
+// Функция инициализации процессов (вызывается один раз при старте)
+function initProcesses() {
+    const processNames = [
+        "LOG_CLEANER", "MEMORY_DUMP", "CACHE_AGENT",
+        "ARCHIVE_TOOL", "CORE_SHIELD", "BACKUP_DAEMON",
+        "NULL_PROC", "DECRYPTOR", "SCRAMBLER"
+    ];
+
+    processes = []; // Очищаем массив (на случай повторной инициализации)
+
+    for (let i = 0; i < 9; i++) {
+        processes.push({
+            id: i,
+            name: processNames[i],
+            health: 100,          // Здоровье процесса в %
+            baseGeneration: 0.5,  // Базовая генерация памяти (ГБ/тик)
+            baseConsumption: 0.1, // Базовое потребление стабильности (%/тик)
+            isActive: true,       // Активен ли процесс
+            isBroken: false       // Сломан ли процесс (health <= 0)
+        });
+    }
+    console.log('Инициализировано процессов:', processes.length);
+}
+// ====================
 // 2. ССЫЛКИ НА ЭЛЕМЕНТЫ ИНТЕРФЕЙСА
 // ====================
 const stabilityBar = document.getElementById('stability-bar');
@@ -70,39 +98,106 @@ function updateInterface() {
 }
 
 // ====================
+// 4.1. ФУНКЦИЯ ОТРИСОВКИ СЕТКИ ПРОЦЕССОВ
+// ====================
+function renderProcessGrid() {
+    const container = document.getElementById('process-grid-container');
+    container.innerHTML = ''; // Очищаем контейнер
+
+    processes.forEach(process => {
+        const processEl = document.createElement('div');
+        processEl.className = 'process';
+        processEl.dataset.id = process.id; // Сохраняем ID в data-атрибут
+
+        // Цвет фона зависит от уровня здоровья
+        let healthColor = '#00aa00'; // Зелёный
+        if (process.health < 50) healthColor = '#ffaa00'; // Жёлтый
+        if (process.health < 20) healthColor = '#ff5555'; // Красный
+        if (process.isBroken) healthColor = '#333333';    // Тёмно-серый (сломан)
+
+        processEl.style.backgroundColor = healthColor;
+
+        // HTML содержимое элемента процесса
+        processEl.innerHTML = `
+            <div class="process-name">${process.name}</div>
+            <div class="process-health">${Math.floor(process.health)}%</div>
+        `;
+
+        // Клик по процессу будет показывать его статус (позже)
+        processEl.addEventListener('click', () => showProcessStatus(process.id));
+
+        container.appendChild(processEl);
+    });
+    console.log('Сетка процессов отрисована');
+}
+
+// Вспомогательная функция (заглушка, пока не реализована)
+function showProcessStatus(processId) {
+    const process = processes.find(p => p.id === processId);
+    addLog(`СТАТУС ${process.name}: Здоровье ${process.health}%, Активен: ${process.isActive}`);
+}
+
+// ====================
 // 5. ФУНКЦИЯ ИГРОВОГО ЦИКЛА (TICK)
 // ====================
 function gameTick() {
-    // 5.1. Уменьшаем стабильность на 0.5% за тик
-    stability = Math.max(0, stability - 0.5); // Math.max не даст уйти ниже 0
+    // 5.1. СБРАСЫВАЕМ прирост/потребление за тик
+    let memoryGainThisTick = 0;
+    let stabilityLossThisTick = 0;
 
-    // 5.2. Увеличиваем память на 1.2 единицы за тик (базовая генерация)
-    memory += 1.2;
+    // 5.2. ПРОХОДИМ ПО ВСЕМ ПРОЦЕССАМ
+    processes.forEach(process => {
+        if (process.isActive && !process.isBroken) {
+            // Активный процесс генерирует память и потребляет стабильность
+            memoryGainThisTick += process.baseGeneration;
+            stabilityLossThisTick += process.baseConsumption;
 
-    // 5.3. Обновляем цифры на экране
+            // Процесс медленно изнашивается (0.1% за тик)
+            process.health = Math.max(0, process.health - 0.1);
+            
+            // Если здоровье упало до 0, процесс ломается
+            if (process.health <= 0) {
+                process.isBroken = true;
+                addLog(`КРИТИЧЕСКИЙ СБОЙ: Процесс ${process.name} отключен.`);
+            }
+        }
+    });
+
+    // 5.3. ПРИМЕНЯЕМ ИТОГИ ТИКА К ОСНОВНЫМ РЕСУРСАМ
+    memory += memoryGainThisTick;
+    stability = Math.max(0, stability - 0.5 - stabilityLossThisTick); // 0.5 — базовая деградация
+
+    // 5.4. ОБНОВЛЯЕМ ИНТЕРФЕЙС (включая сетку процессов)
     updateInterface();
+    renderProcessGrid(); // Теперь перерисовываем сетку каждый тик!
 
-    // 5.4. (Дополнительно) Если стабильность упала до 0, пишем в лог
     if (stability <= 0) {
         addLog('ВНИМАНИЕ: Стабильность на нуле. Требуется глубокая дефрагментация.');
-        stability = 0; // Фиксируем на нуле
+        stability = 0;
     }
 }
 // ====================
 // 6. ЗАПУСК ЦИКЛА И ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА
 // ====================
-// Загружаем сохранение (ДО запуска цикла!)
-loadGame();
+loadGame(); // Загружаем сохранение
 
-// Запускаем игровой тик каждую секунду
+// Если процессов нет (первый запуск) — инициализируем
+if (processes.length === 0) {
+    initProcesses();
+    addLog('Первичная инициализация процессов завершена.');
+}
+
+// Отрисовываем сетку первый раз
+renderProcessGrid();
+
+// Запускаем игровой тик
 const gameInterval = setInterval(function() {
-    gameTick();   // Выполняем логику тика
-    saveGame();   // Сохраняем состояние после каждого тика
+    gameTick();
+    saveGame();
 }, 1000);
 
-// Сразу обновляем интерфейс
 updateInterface();
-addLog('Игровой цикл активирован. Система активна.');
+addLog('Игровой цикл активирован. Все системы в норме.');
 
 // ====================
 // 7. ТЕСТОВЫЙ ОБРАБОТЧИК ДЛЯ КНОПКИ SCAN (пока простой)

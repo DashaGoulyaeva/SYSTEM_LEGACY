@@ -137,3 +137,48 @@ progress::-webkit-progress-value { background: #00aa00; }
 #log-content p:last-child {
     border-bottom: none;
 }
+
+/* ==================== */
+/* СТИЛИ СЕТКИ ПРОЦЕССОВ */
+/* ==================== */
+.process-grid {
+    margin-bottom: 30px;
+}
+
+#process-grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 колонки */
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.process {
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 15px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.process:hover {
+    transform: scale(1.02);
+    border-color: #555;
+}
+
+.process-name {
+    font-size: 0.85em;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0,0,0,0.7);
+}
+
+.process-health {
+    font-size: 1.2em;
+    font-weight: bold;
+}

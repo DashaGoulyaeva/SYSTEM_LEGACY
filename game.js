@@ -8,6 +8,7 @@ const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
 const INCIDENT_STABILITY_PENALTY = 1.2;
 const PROCESS_DECAY_FACTOR = 3.4;
+const MEMORY_GAIN_FACTOR = 1.35;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
 const SLEEP_MODE_STABILITY_FLOOR = 5;
@@ -33,11 +34,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.04,
         consumptionMultiplier: 1.25,
         healthDecayMultiplier: 1.0,
-        analyzeCost: 8,
-        observationGoal: 2,
+        analyzeCost: 4,
+        observationGoal: 20,
         observationHealthThreshold: 86,
         defragThreshold: 40,
-        memoryCap: 32
+        memoryCap: 96
     },
     {
         id: 2,
@@ -46,11 +47,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.045,
         consumptionMultiplier: 0.98,
         healthDecayMultiplier: 1.05,
-        analyzeCost: 10,
-        observationGoal: 3,
+        analyzeCost: 5,
+        observationGoal: 24,
         observationHealthThreshold: 82,
         defragThreshold: 38,
-        memoryCap: 36
+        memoryCap: 112
     },
     {
         id: 3,
@@ -59,11 +60,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.05,
         consumptionMultiplier: 0.82,
         healthDecayMultiplier: 1.1,
-        analyzeCost: 12,
-        observationGoal: 4,
+        analyzeCost: 6,
+        observationGoal: 28,
         observationHealthThreshold: 78,
         defragThreshold: 36,
-        memoryCap: 40
+        memoryCap: 128
     }
 ];
 
@@ -255,11 +256,11 @@ function getCurrentLayerConfig() {
         passiveDecay: Math.max(0.03, 0.08 - depth * 0.006),
         consumptionMultiplier: Math.max(0.45, 0.8 - depth * 0.05),
         healthDecayMultiplier: 1.15 + depth * 0.12,
-        analyzeCost: 58 + depth * 18,
-        observationGoal: 4 + depth * 2,
+        analyzeCost: 8 + depth * 3,
+        observationGoal: 32 + depth * 6,
         observationHealthThreshold: Math.max(46, 76 - depth * 4),
         defragThreshold: Math.max(18, 34 - depth * 2),
-        memoryCap: 40 + depth * 6
+        memoryCap: 144 + depth * 18
     };
 }
 
@@ -1299,7 +1300,7 @@ function gameTick() {
             return;
         }
 
-        memoryGain += process.baseGeneration * 0.3 * getGenerationMultiplier();
+        memoryGain += process.baseGeneration * MEMORY_GAIN_FACTOR * getGenerationMultiplier();
         stabilityLoss += process.baseConsumption * layer.consumptionMultiplier * STABILITY_DRAIN_FACTOR;
         process.health = Math.max(0, process.health - process.baseHealthDecay * layer.healthDecayMultiplier * PROCESS_DECAY_FACTOR);
 

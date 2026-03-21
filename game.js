@@ -32,7 +32,7 @@ const EARLY_LAYER_DEFS = [
         analyzeCost: 8,
         observationGoal: 2,
         observationHealthThreshold: 86,
-        defragThreshold: 8,
+        defragThreshold: 40,
         memoryCap: 32
     },
     {
@@ -45,7 +45,7 @@ const EARLY_LAYER_DEFS = [
         analyzeCost: 10,
         observationGoal: 3,
         observationHealthThreshold: 82,
-        defragThreshold: 7,
+        defragThreshold: 38,
         memoryCap: 36
     },
     {
@@ -58,7 +58,7 @@ const EARLY_LAYER_DEFS = [
         analyzeCost: 12,
         observationGoal: 4,
         observationHealthThreshold: 78,
-        defragThreshold: 6,
+        defragThreshold: 36,
         memoryCap: 40
     }
 ];
@@ -245,7 +245,7 @@ function getCurrentLayerConfig() {
         analyzeCost: 58 + depth * 18,
         observationGoal: 4 + depth * 2,
         observationHealthThreshold: Math.max(46, 76 - depth * 4),
-        defragThreshold: Math.max(4, 6 - Math.floor(depth / 2)),
+        defragThreshold: Math.max(18, 34 - depth * 2),
         memoryCap: 40 + depth * 6
     };
 }
@@ -729,7 +729,7 @@ function getRepairCost(process) {
 
 function refreshDefragAvailability(options = {}) {
     const layer = getCurrentLayerConfig();
-    const ready = stability <= layer.defragThreshold && observation >= layer.observationGoal;
+    const ready = stability >= layer.defragThreshold && observation >= layer.observationGoal;
 
     if (options.announce && ready && !isDefragAvailable) {
         addSystemLog("ДОПУСК", `Выдан допуск к глубокой дефрагментации. Слой ${layer.id} готов к завершению.`, "operator");
@@ -791,35 +791,19 @@ function updateSelectedProcessSummary() {
     const process = getSelectedProcess();
 
     if (!process) {
-        selectedProcessText.classList.toggle("is-hidden", incidentProcessId === null);
-        if (incidentProcessId !== null) {
-            const incidentProcess = processes.find(item => item.id === incidentProcessId);
-            selectedProcessText.textContent = incidentProcess
-                ? `Срочный сигнал: ${incidentProcess.name}. Узел ждёт ручной диагностики.`
-                : "В журнале зафиксирована срочная ошибка. Нужно найти проблемный узел.";
-        } else {
-            selectedProcessText.textContent = "Система работает в фоновом режиме. Узел ещё не выбран.";
-        }
+        selectedProcessText.classList.remove("is-hidden");
+        selectedProcessText.textContent = "Следующее действие определяется по системному журналу.";
         return;
     }
 
     selectedProcessText.classList.remove("is-hidden");
-    const restore = getStabilityRestore(process);
-    const fixCost = getRepairCost(process);
-    const analyzed = isProcessAnalyzed(process);
-    if (analyzed) {
-        selectedProcessText.textContent =
-            `Выбран: ${process.name}. Сбой уже разобран. Новый прогресс по нему не получить. Доступна только очистка: ${fixCost} МБ, восстановление ${restore} ед. стабильности.`;
-        return;
-    }
-
-    selectedProcessText.textContent =
-        `Выбран: ${process.name}. Состояние ${Math.floor(process.health)}%. Можно сначала разобрать сбой или сразу очистить его за ${fixCost} МБ.`;
+    selectedProcessText.textContent = `Выбран узел: ${process.name}. Состояние: ${Math.floor(process.health)}%.`;
 }
 
 function updateCommandVisibility() {
     const hasSelection = shiftStarted && selectedProcessId !== null;
-    const showDefrag = shiftStarted && isDefragAvailable;
+    const layer = getCurrentLayerConfig();
+    const showDefrag = shiftStarted && observation >= layer.observationGoal;
     const canScan = shiftStarted && selectedProcessId === null && (incidentProcessId !== null || stability <= getEmergencyThreshold());
     const selectedProcess = getSelectedProcess();
     const analyzed = isProcessAnalyzed(selectedProcess);
@@ -897,9 +881,6 @@ function updateInterface() {
     if (!shiftStarted) {
         sysStatusText.textContent = "ОЖИДАНИЕ";
         sysStatusText.style.color = "#c4cfc0";
-    } else if (stability <= layer.defragThreshold) {
-        sysStatusText.textContent = "АВАРИЙНЫЙ РИСК";
-        sysStatusText.style.color = "#c97d7d";
     } else if (stability <= emergencyThreshold) {
         sysStatusText.textContent = "ПРЕДАВАРИЙНЫЙ РЕЖИМ";
         sysStatusText.style.color = "#bea46f";
@@ -909,7 +890,7 @@ function updateInterface() {
     }
 
     sysStatusText.classList.remove("status-warning", "status-critical");
-    if (shiftStarted && stability <= layer.defragThreshold) {
+    if (shiftStarted && stability <= Math.max(5, Math.floor(emergencyThreshold * 0.5))) {
         sysStatusText.classList.add("status-critical");
     } else if (shiftStarted && stability <= emergencyThreshold) {
         sysStatusText.classList.add("status-warning");
@@ -921,17 +902,16 @@ function updateInterface() {
     } else if (stability > emergencyThreshold) {
         stabilityNote.textContent = "Устойчивость снижается. Рекомендуется подготовить ручное вмешательство.";
         stabilityNote.classList.add("danger-note");
-    } else if (stability > layer.defragThreshold) {
-        stabilityNote.textContent = "Предаварийный уровень. Дальнейшее снижение может привести к срыву контура.";
-        stabilityNote.classList.add("danger-note");
     } else {
-        stabilityNote.textContent = "Критический риск срыва. Контур удерживается на пределе.";
+        stabilityNote.textContent = "Предаварийный уровень. Дальнейшее снижение может привести к срыву контура.";
         stabilityNote.classList.add("danger-note");
     }
 
     defragHint.textContent = isDefragAvailable
         ? "Выдан допуск к глубокой дефрагментации."
-        : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} сбоев и снизить стабильность до ${layer.defragThreshold} / ${maxStability} или ниже.`;
+        : observation >= layer.observationGoal
+            ? `Разбор завершён. Для допуска нужно удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`
+            : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} сбоев и удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`;
 
     scanButton.disabled = !shiftStarted;
     analyzeButton.disabled = !shiftStarted || selectedProcessId === null || analyzedSelectedProcess;
@@ -1032,7 +1012,6 @@ function fixProcess() {
     }
     selectedProcessId = null;
     scannedProcessId = null;
-    observedProcessIds = observedProcessIds.filter(id => id !== process.id);
     process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
 
     addOperatorLog(`Запущена очистка сбоя ${process.name}. Расход резерва: ${fixCost} МБ.`);
@@ -1066,13 +1045,21 @@ function analyzeProcess() {
         observation += 1;
         observedProcessIds.push(process.id);
     }
+    const resolvedIncident = process.id === incidentProcessId;
 
     addOperatorLog(`Запущена диагностика узла ${process.name}.`);
     if (alreadyObserved) {
-        addSystemLog(process.name, "Повторный разбор завершён. Новый прогресс не получен, ошибка всё ещё требует очистки.", "service");
+        addSystemLog(process.name, "Повторный разбор завершён. Новый прогресс не получен.", "service");
     } else {
-        addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Ошибка остаётся активной и требует очистки.`, "operator");
+        addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
     }
+
+    if (resolvedIncident) {
+        incidentProcessId = null;
+        incidentCooldown = stability <= getEmergencyThreshold() ? 1 : 3;
+    }
+    selectedProcessId = null;
+    scannedProcessId = null;
 
     refreshDefragAvailability({ announce: true });
     updateInterface();
@@ -1082,8 +1069,8 @@ function analyzeProcess() {
 function performDeepDefrag() {
     const layer = getCurrentLayerConfig();
 
-    if (stability > layer.defragThreshold) {
-        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужна стабильность ${layer.defragThreshold}% или ниже.`, "warning");
+    if (stability < layer.defragThreshold) {
+        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужно удерживать стабильность не ниже ${layer.defragThreshold} / ${getStartingStability()}.`, "warning");
         return;
     }
 

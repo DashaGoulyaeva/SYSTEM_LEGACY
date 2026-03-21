@@ -7,6 +7,7 @@ const ARCHIVE_LOG_TARGET = 360;
 const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
 const FIRST_LAYER_FAILURE_ID = 1;
+const LOG_REMINDER_INTERVAL = 4;
 
 const PROCESS_TEMPLATES = [
     { name: "ЖУРНАЛ_КОНТУР", baseGeneration: 0.16, baseConsumption: 0.015, baseHealthDecay: 0.15 },
@@ -179,6 +180,14 @@ const LIVE_LOG_RESULTS = [
     "данные переданы без остановки"
 ];
 
+const PROCESS_PHASES = {
+    normal: { id: "normal", label: "ШТАТНЫЙ РЕЖИМ", severity: 0 },
+    wear: { id: "wear", label: "ИЗНОС", severity: 1 },
+    preerror: { id: "preerror", label: "ПРЕДОШИБКА", severity: 2 },
+    error: { id: "error", label: "ОШИБКА", severity: 3 },
+    critical: { id: "critical", label: "КРИТИЧЕСКИЙ СБОЙ", severity: 4 }
+};
+
 const stabilityBar = document.getElementById("stability-bar");
 const stabilityText = document.getElementById("stability-text");
 const stabilityNote = document.getElementById("stability-note");
@@ -268,7 +277,60 @@ function getUpgradeCost(key) {
     return UPGRADE_DEFS[key].baseCost * (upgrades[key] + 1);
 }
 
+function getProcessPhaseThresholds() {
+    const layer = getCurrentLayerConfig();
+    const wear = clamp(96 - (layer.id - 1) * 2, 82, 96);
+    const preerror = clamp(84 - (layer.id - 1) * 3, 62, 84);
+    const error = clamp(64 - (layer.id - 1) * 4, 42, 64);
+
+    return { wear, preerror, error };
+}
+
+function getPhaseById(phaseId) {
+    return PROCESS_PHASES[phaseId] || PROCESS_PHASES.normal;
+}
+
+function getProcessPhaseByHealth(health, isBroken = false) {
+    const thresholds = getProcessPhaseThresholds();
+
+    if (isBroken || health <= 0) {
+        return PROCESS_PHASES.critical;
+    }
+
+    if (health <= thresholds.error) {
+        return PROCESS_PHASES.error;
+    }
+
+    if (health <= thresholds.preerror) {
+        return PROCESS_PHASES.preerror;
+    }
+
+    if (health <= thresholds.wear) {
+        return PROCESS_PHASES.wear;
+    }
+
+    return PROCESS_PHASES.normal;
+}
+
+function getProcessPhase(process) {
+    return getPhaseById(process.phaseId || getProcessPhaseByHealth(process.health, process.isBroken).id);
+}
+
+function formatCycleTag(tick = shiftTick) {
+    return `ЦИКЛ ${String(Math.max(0, tick)).padStart(4, "0")}`;
+}
+
+function toHex(value, width = 4) {
+    return Math.max(0, value).toString(16).toUpperCase().padStart(width, "0");
+}
+
+function buildNoiseHeader(tick, seed) {
+    return `${toHex((tick + 1) * 173 + seed * 37, 4)}::${toHex((tick + 3) * 89 + seed * 211, 4)}`;
+}
+
 function createProcessFromTemplate(template, index) {
+    const phase = getProcessPhaseByHealth(100);
+
     return {
         id: index,
         name: template.name,
@@ -277,13 +339,20 @@ function createProcessFromTemplate(template, index) {
         baseConsumption: template.baseConsumption,
         baseHealthDecay: template.baseHealthDecay,
         isActive: true,
-        isBroken: false
+        isBroken: false,
+        phaseId: phase.id,
+        lastPhaseChangeTick: 0,
+        lastReminderTick: -LOG_REMINDER_INTERVAL
     };
 }
 
 function normalizeProcess(process, index) {
     const template = PROCESS_TEMPLATES[index] || PROCESS_TEMPLATES[0];
     const health = clamp(readNumber(process.health, 100), 0, 100);
+    const isBroken = Boolean(process.isBroken) || health <= 0;
+    const phase = process.phaseId && PROCESS_PHASES[process.phaseId]
+        ? PROCESS_PHASES[process.phaseId]
+        : getProcessPhaseByHealth(health, isBroken);
 
     return {
         id: readNumber(process.id, index),
@@ -293,7 +362,10 @@ function normalizeProcess(process, index) {
         baseConsumption: readNumber(process.baseConsumption, template.baseConsumption),
         baseHealthDecay: readNumber(process.baseHealthDecay, template.baseHealthDecay),
         isActive: process.isActive !== false,
-        isBroken: Boolean(process.isBroken) || health <= 0
+        isBroken,
+        phaseId: phase.id,
+        lastPhaseChangeTick: readNumber(process.lastPhaseChangeTick, 0),
+        lastReminderTick: readNumber(process.lastReminderTick, -LOG_REMINDER_INTERVAL)
     };
 }
 
@@ -396,9 +468,9 @@ function loadGame() {
     }
 }
 
-function addLog(message) {
+function addLog(message, variant = "service") {
     const entry = document.createElement("p");
-    entry.className = "log-entry";
+    entry.className = `log-entry log-entry-${variant}`;
     entry.textContent = `> ${message}`;
     logContent.appendChild(entry);
     logContent.scrollTop = logContent.scrollHeight;
@@ -406,32 +478,125 @@ function addLog(message) {
 
 function appendArchiveLog(message, extraClass = "") {
     const entry = document.createElement("p");
-    entry.className = `log-entry${extraClass ? ` ${extraClass}` : ""}`;
+    entry.className = `log-entry log-entry-archive${extraClass ? ` ${extraClass}` : ""}`;
     entry.textContent = `> ${message}`;
     logContent.appendChild(entry);
 }
 
+function addStructuredLog(scope, message, variant = "service") {
+    addLog(`[${formatCycleTag()}] [${scope}] ${message}`, variant);
+}
+
+function addSystemLog(scope, message, variant = "service") {
+    addStructuredLog(scope, message, variant);
+}
+
+function addOperatorLog(message) {
+    addStructuredLog("ОПЕРАТОР", message, "operator");
+}
+
 function buildArchiveLine(index) {
     const subsystem = ARCHIVE_SUBSYSTEMS[index % ARCHIVE_SUBSYSTEMS.length];
-    const action = ARCHIVE_ACTIONS[(index * 3) % ARCHIVE_ACTIONS.length];
-    const result = ARCHIVE_RESULTS[(index * 5) % ARCHIVE_RESULTS.length];
-    const sector = String(9000 + index).padStart(5, "0");
-    const cycle = String(300 + (index % 700)).padStart(4, "0");
+    const drift = toHex((index + 7) * 19, 4);
+    const checksum = toHex((index + 11) * 97, 4);
+    const sector = toHex(0x2300 + index, 4);
+    const cycle = toHex(0x1200 + index * 3, 4);
+    const marker = buildNoiseHeader(index, checksum.length + drift.length);
 
-    return `[архив] цикл ${cycle} · сектор ${sector} · ${subsystem}: ${action}, ${result}.`;
+    return `[архив:${cycle}] ${marker} sec=${sector} bus=${subsystem} qsum=${checksum} drift=${drift} flag=hold`;
 }
 
 function buildRoutineLogLine(weakest, tick) {
     const subsystem = LIVE_LOG_SUBSYSTEMS[tick % LIVE_LOG_SUBSYSTEMS.length];
-    const action = LIVE_LOG_ACTIONS[(tick * 2) % LIVE_LOG_ACTIONS.length];
-    const result = LIVE_LOG_RESULTS[(tick * 3) % LIVE_LOG_RESULTS.length];
+    const action = LIVE_LOG_ACTIONS[(tick * 2) % LIVE_LOG_ACTIONS.length].replace(/\s+/g, "_");
+    const result = LIVE_LOG_RESULTS[(tick * 3) % LIVE_LOG_RESULTS.length].replace(/\s+/g, "_");
+    const weakestName = weakest ? weakest.name : "SYS_IDLE";
+    const health = weakest ? Math.floor(weakest.health) : 100;
+    const checksum = toHex((tick + 5) * 101 + health * 17, 4);
+    const reserve = toHex(Math.floor(memory * 8) + tick * 9, 4);
+    const marker = buildNoiseHeader(tick, weakest ? weakest.id + 1 : 0);
 
-    if (!weakest) {
-        return `${subsystem}: ${action}, ${result}.`;
+    return `${marker} bus=${subsystem} proc=${weakestName} qsum=${checksum} mem=${reserve} hp=${health} evt=${action} ack=${result}`;
+}
+
+function logProcessPhaseChange(process, previousPhase, nextPhase) {
+    if (nextPhase.id === previousPhase.id) {
+        return;
     }
 
-    const drift = Math.max(0, Math.floor(100 - weakest.health));
-    return `${subsystem}: ${action}, узел ${weakest.name}, отклонение ${drift} ед., ${result}.`;
+    const healthText = `${Math.max(0, Math.floor(process.health))}%`;
+
+    if (nextPhase.id === PROCESS_PHASES.wear.id) {
+        addSystemLog(process.name, `Рост остаточного износа. Узел вышел из штатного диапазона: ${healthText}.`, "warning");
+        return;
+    }
+
+    if (nextPhase.id === PROCESS_PHASES.preerror.id) {
+        addSystemLog(process.name, `ПРЕДУПРЕЖДЕНИЕ. Узел приближается к ошибке. Текущее состояние: ${healthText}.`, "warning");
+        return;
+    }
+
+    if (nextPhase.id === PROCESS_PHASES.error.id) {
+        addSystemLog(process.name, `ОШИБКА. СРОЧНО ИСПРАВИТЬ. Автокоррекция недоступна, состояние узла: ${healthText}.`, "alert");
+        return;
+    }
+
+    if (nextPhase.id === PROCESS_PHASES.critical.id) {
+        addSystemLog(process.name, "КРИТИЧЕСКИЙ СБОЙ. Узел отключён, штатное восстановление недоступно.", "critical");
+    }
+}
+
+function syncProcessPhase(process) {
+    const previousPhase = getProcessPhase(process);
+    const nextPhase = getProcessPhaseByHealth(process.health, process.isBroken);
+
+    process.phaseId = nextPhase.id;
+
+    if (previousPhase.id !== nextPhase.id) {
+        process.lastPhaseChangeTick = shiftTick;
+        logProcessPhaseChange(process, previousPhase, nextPhase);
+    }
+
+    return nextPhase;
+}
+
+function primeProcessesForShift() {
+    const thresholds = getProcessPhaseThresholds();
+    const primaryIndex = (defragCounter * 2) % processes.length;
+    const secondaryIndex = (primaryIndex + 3) % processes.length;
+
+    processes.forEach((process, index) => {
+        if (index === primaryIndex) {
+            process.health = Math.min(process.health, thresholds.error + 4);
+        } else if (index === secondaryIndex) {
+            process.health = Math.min(process.health, thresholds.preerror + 6);
+        }
+
+        process.isBroken = process.health <= 0;
+        process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
+        process.lastReminderTick = -LOG_REMINDER_INTERVAL;
+    });
+}
+
+function getIncidentCandidate() {
+    if (incidentCooldown > 0) {
+        return null;
+    }
+
+    const minSeverity = shiftTick >= 12
+        ? PROCESS_PHASES.preerror.severity
+        : PROCESS_PHASES.error.severity;
+
+    return processes
+        .filter(process => process.isActive && !process.isBroken && getProcessPhase(process).severity >= minSeverity)
+        .sort((left, right) => {
+            const severityDiff = getProcessPhase(right).severity - getProcessPhase(left).severity;
+            if (severityDiff !== 0) {
+                return severityDiff;
+            }
+
+            return left.health - right.health;
+        })[0] || null;
 }
 
 function addBackgroundSystemLog(weakest) {
@@ -441,16 +606,19 @@ function addBackgroundSystemLog(weakest) {
             return;
         }
 
-        if (selectedProcessId === null && shiftTick % 2 === 0) {
-            addLog(
-                `Ожидание ручного вмешательства: ${incidentProcess.name}, текущее состояние ${Math.floor(incidentProcess.health)}%, автоматическая очистка недоступна.`
+        if (selectedProcessId === null && shiftTick - incidentProcess.lastReminderTick >= LOG_REMINDER_INTERVAL) {
+            addSystemLog(
+                incidentProcess.name,
+                `Ошибка активна. Ожидается ручное вмешательство. Состояние узла: ${Math.floor(incidentProcess.health)}%.`,
+                getProcessPhase(incidentProcess).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
             );
+            incidentProcess.lastReminderTick = shiftTick;
         }
         return;
     }
 
-    if (shiftTick % 2 === 0) {
-        addLog(buildRoutineLogLine(weakest, shiftTick));
+    if (shiftTick % 3 === 0) {
+        addLog(buildRoutineLogLine(weakest, shiftTick), "noise");
     }
 }
 
@@ -462,8 +630,8 @@ function failFirstLayer() {
     clearSavedGame();
     resetGameState();
     seedArchiveLog();
-    addLog("Стабильность контура исчерпана. Испытательная смена завершена.");
-    addLog("Решение дежурного признано неудовлетворительным. Допуск отозван.");
+    addSystemLog("КОНТУР-1", "Стабильность исчерпана. Испытательная смена завершена.", "critical");
+    addSystemLog("ДОПУСК", "Решение дежурного признано неудовлетворительным. Допуск отозван.", "critical");
     showBriefing();
     startShiftButton.textContent = "Начать новую смену";
     newGameButton.classList.add("is-hidden");
@@ -477,8 +645,8 @@ function seedArchiveLog() {
     }
 
     appendArchiveLog("[архив] журнал не начинается с текущей смены. ранние записи не выгружены полностью.", "log-entry-anchor");
-    appendArchiveLog("[архив] старые ошибки очищены не полностью. система продолжает работу поверх остаточного слоя.");
-    appendArchiveLog("Терминал подключён к текущей смене. Журнал продолжается.");
+    appendArchiveLog("[архив] old.err residual=present trunc=partial sync=deferred.");
+    appendArchiveLog("[архив] tty.attach accepted. live stream follows.");
 
     const anchor = logContent.querySelector(".log-entry-anchor");
     if (anchor) {
@@ -511,7 +679,7 @@ function startShift(options = {}) {
 
     if (shouldResume) {
         shiftStarted = true;
-        addLog(`Смена восстановлена. Текущий контур: ${getCurrentLayerConfig().code}.`);
+        addSystemLog("СИСТЕМА", `Смена восстановлена. Текущий контур: ${getCurrentLayerConfig().code}.`, "service");
     } else {
         const alreadyStarted = shiftStarted;
         shiftStarted = true;
@@ -525,9 +693,10 @@ function startShift(options = {}) {
         passiveObservationBuffer = 0;
 
         if (!alreadyStarted) {
-            addLog("Инструктаж завершён. Оператор занял рабочее место.");
-            addLog("Смена начата. Система работает в фоновом режиме.");
-            addLog("Пока просто следи за журналом и жди сигнала.");
+            primeProcessesForShift();
+            addOperatorLog("Инструктаж завершён. Рабочее место занято.");
+            addSystemLog("СИСТЕМА", "Смена начата. Подсистемы продолжают работу в фоновом режиме.", "service");
+            addSystemLog("РЕГЛАМЕНТ", "Ориентир по журналу сохранён. Ожидается первый значимый сигнал.", "service");
         }
     }
 
@@ -554,7 +723,7 @@ function refreshDefragAvailability(options = {}) {
     const ready = stability <= layer.defragThreshold && observation >= layer.observationGoal;
 
     if (options.announce && ready && !isDefragAvailable) {
-        addLog(`Выдан допуск к глубокой дефрагментации. Слой ${layer.id} готов к завершению.`);
+        addSystemLog("ДОПУСК", `Выдан допуск к глубокой дефрагментации. Слой ${layer.id} готов к завершению.`, "operator");
     }
 
     isDefragAvailable = ready;
@@ -583,9 +752,13 @@ function raiseIncident(process, message) {
 
     incidentProcessId = process.id;
     firstIncidentRaised = true;
-    addLog(`ОШИБКА. СРОЧНО ИСПРАВИТЬ: ${process.name}.`);
-    addLog(message || `Зафиксирована деградация узла ${process.name}. Доступна ручная диагностика.`);
-    addLog("Ожидается команда: ОТКРЫТЬ ОШИБКУ.");
+    process.lastReminderTick = shiftTick;
+    addSystemLog(
+        process.name,
+        message || "Узел переведён в очередь ручного вмешательства. Доступна ручная диагностика.",
+        getProcessPhase(process).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
+    );
+    addSystemLog("СИСТЕМА", "Ожидается команда: ОТКРЫТЬ ОШИБКУ.", "operator");
     updateInterface();
     saveGame();
 }
@@ -757,13 +930,13 @@ function updateInterface() {
 function purchaseUpgrade(key) {
     const upgrade = UPGRADE_DEFS[key];
     if (upgrades[key] >= upgrade.maxLevel) {
-        addLog(`${upgrade.name}: предел улучшения уже достигнут.`);
+        addSystemLog(upgrade.name, "Предел улучшения уже достигнут.", "service");
         return;
     }
 
     const cost = getUpgradeCost(key);
     if (knowledge < cost) {
-        addLog(`${upgrade.name}: недостаточно знания. Нужно ${cost}.`);
+        addSystemLog(upgrade.name, `Недостаточно знания. Требуется: ${cost}.`, "warning");
         return;
     }
 
@@ -774,7 +947,7 @@ function purchaseUpgrade(key) {
         stability = Math.min(getStartingStability(), stability + 5);
     }
 
-    addLog(`${upgrade.name} установлен. Новый уровень: ${upgrades[key]}/${upgrade.maxLevel}.`);
+    addSystemLog(upgrade.name, `Установлен. Новый уровень: ${upgrades[key]}/${upgrade.maxLevel}.`, "operator");
     refreshDefragAvailability();
     updateInterface();
     saveGame();
@@ -787,13 +960,13 @@ function scanSystem() {
     }
 
     if (incidentProcessId === null && stability > getEmergencyThreshold()) {
-        addLog("Сканирование пока не требуется. Система не запрашивала ручную диагностику.");
+        addSystemLog("СИСТЕМА", "Сканирование пока не требуется. Ручная диагностика не запрошена.", "service");
         return;
     }
 
     const target = processes.find(process => process.id === incidentProcessId) || getWeakestActiveProcess();
     if (!target) {
-        addLog("Сканирование не дало результата: активных процессов не осталось.");
+        addSystemLog("СИСТЕМА", "Сканирование не дало результата. Активных процессов не осталось.", "warning");
         return;
     }
 
@@ -801,7 +974,7 @@ function scanSystem() {
     scannedProcessId = target.id;
     updateInterface();
 
-    addLog(`Сканирование завершено. Самый нестабильный процесс: ${target.name} (${Math.floor(target.health)}%). Доступны команды: ДИАГНОСТИКА / ОЧИСТИТЬ СБОЙ.`);
+    addOperatorLog(`Запущено сканирование узлов. Выбран ${target.name}, состояние ${Math.floor(target.health)}%. Доступны команды: ДИАГНОСТИКА / ОЧИСТИТЬ СБОЙ.`);
 
     saveGame();
 }
@@ -809,23 +982,23 @@ function scanSystem() {
 function fixProcess() {
     const process = getSelectedProcess();
     if (!process) {
-        addLog("Сначала нужно открыть ошибку и перейти к аварийному узлу.");
+        addSystemLog("СИСТЕМА", "Сначала нужно открыть ошибку и перейти к аварийному узлу.", "warning");
         return;
     }
 
     if (process.isBroken) {
-        addLog(`Процесс ${process.name} уже отключён и не чинится обычной процедурой.`);
+        addSystemLog(process.name, "Узел уже отключён и не чинится обычной процедурой.", "critical");
         return;
     }
 
     if (process.health >= 100) {
-        addLog(`Процесс ${process.name} уже в полном порядке.`);
+        addSystemLog(process.name, "Узел уже находится в штатном диапазоне.", "service");
         return;
     }
 
     const fixCost = getRepairCost(process);
     if (memory < fixCost) {
-        addLog(`Для очистки нужно ${fixCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`);
+        addSystemLog(process.name, `Для очистки нужно ${fixCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`, "warning");
         return;
     }
 
@@ -843,10 +1016,12 @@ function fixProcess() {
     selectedProcessId = null;
     scannedProcessId = null;
     observedProcessIds = observedProcessIds.filter(id => id !== process.id);
+    process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
 
-    addLog(`Процесс ${process.name} восстановлен. Потрачено ${fixCost} МБ резерва. Стабильность +${stabilityRestore}.`);
+    addOperatorLog(`Запущена очистка сбоя ${process.name}. Расход резерва: ${fixCost} МБ.`);
+    addSystemLog(process.name, `Сбой очищен. Устойчивость контура +${stabilityRestore}.`, "operator");
     if (resolvedIncident) {
-        addLog("Срочная ошибка снята. Сбой закрыт без подробного разбора.");
+        addSystemLog("СИСТЕМА", "Срочная ошибка снята. Сбой закрыт без подробного разбора.", "service");
     }
     refreshDefragAvailability();
     updateInterface();
@@ -856,13 +1031,13 @@ function fixProcess() {
 function analyzeProcess() {
     const process = getSelectedProcess();
     if (!process) {
-        addLog("Сначала нужно открыть ошибку и перейти к аварийному узлу.");
+        addSystemLog("СИСТЕМА", "Сначала нужно открыть ошибку и перейти к аварийному узлу.", "warning");
         return;
     }
 
     const layer = getCurrentLayerConfig();
     if (memory < layer.analyzeCost) {
-        addLog(`Для диагностики нужно ${layer.analyzeCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`);
+        addSystemLog(process.name, `Для диагностики нужно ${layer.analyzeCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`, "warning");
         return;
     }
 
@@ -875,10 +1050,11 @@ function analyzeProcess() {
         observedProcessIds.push(process.id);
     }
 
+    addOperatorLog(`Запущена диагностика узла ${process.name}.`);
     if (alreadyObserved) {
-        addLog(`Диагностика ${process.name}: повторный разбор. Новый прогресс не получен, ошибка всё ещё требует очистки.`);
+        addSystemLog(process.name, "Повторный разбор завершён. Новый прогресс не получен, ошибка всё ещё требует очистки.", "service");
     } else {
-        addLog(`Диагностика ${process.name}: сбой разобран (${observation}/${layer.observationGoal}). Ошибка всё ещё активна и требует очистки.`);
+        addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Ошибка остаётся активной и требует очистки.`, "operator");
     }
 
     refreshDefragAvailability({ announce: true });
@@ -890,12 +1066,12 @@ function performDeepDefrag() {
     const layer = getCurrentLayerConfig();
 
     if (stability > layer.defragThreshold) {
-        addLog(`Завершение слоя пока недоступно: нужна стабильность ${layer.defragThreshold}% или ниже.`);
+        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужна стабильность ${layer.defragThreshold}% или ниже.`, "warning");
         return;
     }
 
     if (observation < layer.observationGoal) {
-        addLog(`Завершение слоя пока недоступно: нужно разобрать ${layer.observationGoal} сбоев, разобрано ${observation}.`);
+        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужно разобрать ${layer.observationGoal} сбоев, разобрано ${observation}.`, "warning");
         return;
     }
 
@@ -908,7 +1084,7 @@ function performDeepDefrag() {
     );
 
     if (!confirmed) {
-        addLog("Завершение слоя отменено оператором.");
+        addOperatorLog("Глубокая дефрагментация отменена оператором.");
         return;
     }
 
@@ -918,8 +1094,7 @@ function performDeepDefrag() {
     const healthyProcesses = processes.filter(process => process.health > 80).length;
     const knowledgeGain = 4 + layer.id + observation + Math.floor(healthyProcesses / 2);
 
-    addLog("==================================================");
-    addLog(`Запущена глубокая дефрагментация · ${oldLayerCode}`);
+    addOperatorLog(`Запущена глубокая дефрагментация слоя ${oldLayerCode}.`);
 
     defragCounter += 1;
     knowledge += knowledgeGain;
@@ -938,12 +1113,16 @@ function performDeepDefrag() {
     stability = getStartingStability();
     refreshDefragAvailability();
 
-    addLog(`Слой завершён. Цикл: ${defragCounter}.`);
-    addLog(`Стабильность: ${Math.floor(oldStability)} / ${getStartingStability()} → ${Math.floor(stability)} / ${getStartingStability()}`);
-    addLog(`Резерв памяти: ${oldMemory.toFixed(0)} МБ → ${memory.toFixed(0)} МБ`);
-    addLog(`Получено знания: +${knowledgeGain}`);
-    addLog(`Новый слой: ${getCurrentLayerNumber()} / ${TOTAL_LAYERS} · ${getCurrentLayerConfig().code}`);
-    addLog("==================================================");
+    processes.forEach(process => {
+        process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
+        process.lastReminderTick = -LOG_REMINDER_INTERVAL;
+    });
+
+    addSystemLog("ДЕФРАГ", `Слой завершён. Цикл: ${defragCounter}.`, "operator");
+    addSystemLog("ДЕФРАГ", `Стабильность: ${Math.floor(oldStability)} / ${getStartingStability()} -> ${Math.floor(stability)} / ${getStartingStability()}.`, "service");
+    addSystemLog("ДЕФРАГ", `Резерв памяти: ${oldMemory.toFixed(0)} МБ -> ${memory.toFixed(0)} МБ.`, "service");
+    addSystemLog("ДЕФРАГ", `Получено знания: +${knowledgeGain}.`, "service");
+    addSystemLog("ДЕФРАГ", `Новый слой: ${getCurrentLayerNumber()} / ${TOTAL_LAYERS} · ${getCurrentLayerConfig().code}.`, "operator");
 
     updateInterface();
     saveGame();
@@ -970,8 +1149,9 @@ function gameTick() {
 
         if (process.health <= 0) {
             process.isBroken = true;
-            addLog(`Критический сбой: процесс ${process.name} отключён.`);
         }
+
+        syncProcessPhase(process);
     });
 
     memory = Math.min(getMemoryCap(), memory + memoryGain);
@@ -988,34 +1168,22 @@ function gameTick() {
     }
 
     if (startupLogIndex < STARTUP_LOGS.length && shiftTick >= (startupLogIndex + 1) * 2 && !firstIncidentRaised) {
-        addLog(STARTUP_LOGS[startupLogIndex]);
+        addSystemLog("СИСТЕМА", STARTUP_LOGS[startupLogIndex], "service");
         startupLogIndex += 1;
     }
 
     const weakest = getWeakestActiveProcess();
     addBackgroundSystemLog(weakest);
-    const shouldRaiseFirstIncident = !firstIncidentRaised && shiftTick >= 5;
-    const shouldRaiseCriticalIncident =
-        firstIncidentRaised &&
-        incidentProcessId === null &&
-        selectedProcessId === null &&
-        weakest &&
-        stability <= getEmergencyThreshold() &&
-        (incidentCooldown <= 1 || weakest.health <= 68);
-    const shouldRaiseRegularIncident =
-        firstIncidentRaised &&
-        incidentProcessId === null &&
-        incidentCooldown === 0 &&
-        selectedProcessId === null &&
-        weakest &&
-        weakest.health <= Math.max(62, layer.observationHealthThreshold + 2);
+    const incidentCandidate = incidentProcessId === null && selectedProcessId === null
+        ? getIncidentCandidate()
+        : null;
 
-    if (shouldRaiseFirstIncident && weakest) {
-        raiseIncident(weakest, `Зафиксирована критическая деградация узла ${weakest.name}. Требуется ручная проверка.`);
-    } else if (shouldRaiseCriticalIncident) {
-        raiseIncident(weakest, `Аварийный режим: узел ${weakest.name} требует немедленного ручного вмешательства.`);
-    } else if (shouldRaiseRegularIncident) {
-        raiseIncident(weakest, `Вторичное отклонение: узел ${weakest.name} выпал из штатного диапазона.`);
+    if (incidentCandidate) {
+        const candidatePhase = getProcessPhase(incidentCandidate);
+        const queueMessage = candidatePhase.severity >= PROCESS_PHASES.error.severity
+            ? "Ошибка переведена в очередь ручного вмешательства. Автокоррекция недоступна."
+            : "Узел переведён в очередь ручной проверки. Ошибка может сформироваться без вмешательства.";
+        raiseIncident(incidentCandidate, queueMessage);
     }
 
     updatePassiveObservation();
@@ -1059,7 +1227,7 @@ updateInterface();
 showBriefing();
 
 if (shiftStarted && !resumePromptPending) {
-    addLog(`Смена восстановлена. Текущий слой: ${getCurrentLayerConfig().code}.`);
+    addSystemLog("СИСТЕМА", `Смена восстановлена. Текущий слой: ${getCurrentLayerConfig().code}.`, "service");
 }
 
 setInterval(gameTick, TICK_MS);

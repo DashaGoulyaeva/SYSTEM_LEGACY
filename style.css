@@ -241,6 +241,48 @@ progress {
     border-bottom: none;
 }
 
+.log-entry-archive,
+.log-entry-noise {
+    color: rgba(133, 153, 126, 0.72);
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-shadow: none;
+}
+
+.log-entry-archive {
+    opacity: 0.62;
+}
+
+.log-entry-noise {
+    opacity: 0.82;
+}
+
+.log-entry-service {
+    color: var(--text);
+}
+
+.log-entry-operator {
+    color: var(--green-strong);
+    border-bottom-color: rgba(142, 180, 124, 0.3);
+}
+
+.log-entry-warning {
+    color: #dcc38d;
+    border-bottom-color: rgba(190, 164, 111, 0.42);
+}
+
+.log-entry-alert {
+    color: #efb0a4;
+    border-bottom-color: rgba(201, 125, 125, 0.45);
+}
+
+.log-entry-critical {
+    color: #ffd0d0;
+    border-bottom-color: rgba(201, 125, 125, 0.65);
+    text-shadow: 0 0 8px rgba(201, 125, 125, 0.18);
+}
+
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

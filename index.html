@@ -10,8 +10,8 @@
 <body>
     <div class="briefing-overlay" id="briefing-overlay">
         <section class="briefing-card">
-            <h1>ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ</h1>
-            <div class="briefing-grid">
+            <h1 id="briefing-title">ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ</h1>
+            <div id="briefing-grid" class="briefing-grid">
                 <article class="briefing-block">
                     <h2>ПОРЯДОК РАБОТЫ</h2>
                     <ul>
@@ -32,8 +32,13 @@
                     </ul>
                 </article>
             </div>
+            <div id="briefing-result" class="briefing-result is-hidden">
+                <p id="briefing-result-lead" class="briefing-result-lead"></p>
+                <div id="briefing-result-stats" class="briefing-result-stats"></div>
+            </div>
             <div class="briefing-actions">
                 <button id="new-game-btn" class="ghost-btn is-hidden">Начать новую смену</button>
+                <button id="share-result-btn" class="ghost-btn is-hidden">Поделиться результатом</button>
                 <button id="start-shift-btn" class="primary-btn">Сесть за терминал</button>
             </div>
         </section>
@@ -118,7 +123,7 @@
                         <span class="cmd-title">Диагностика</span>
                     </button>
                     <button id="fix-btn" class="cmd-btn is-hidden">
-                        <span class="cmd-title">Очистить сбой</span>
+                        <span class="cmd-title">Исправить</span>
                     </button>
                     <button id="reset-btn" class="cmd-btn danger is-hidden">
                         <span class="cmd-title">Глубокая дефрагментация</span>

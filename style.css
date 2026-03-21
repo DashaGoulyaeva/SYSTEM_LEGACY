@@ -529,6 +529,30 @@ progress::-moz-progress-bar {
     margin-top: 14px;
 }
 
+.briefing-result {
+    margin-top: 14px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    background: rgba(8, 11, 8, 0.98);
+}
+
+.briefing-result-lead {
+    color: #f0f3ec;
+    font-size: 1.02rem;
+    line-height: 1.5;
+}
+
+.briefing-result-stats {
+    margin-top: 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.briefing-result-line {
+    color: var(--text);
+    font-size: 0.82rem;
+}
+
 @media (max-width: 1180px) {
     body {
         overflow: auto;

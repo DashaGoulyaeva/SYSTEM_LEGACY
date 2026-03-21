@@ -6,9 +6,11 @@ const TICK_MS = 1000;
 const ARCHIVE_LOG_TARGET = 360;
 const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
-const INCIDENT_STABILITY_PENALTY = 0.45;
+const INCIDENT_STABILITY_PENALTY = 1.2;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
+const SLEEP_MODE_STABILITY_FLOOR = 5;
+const SLEEP_MODE_LOG_INTERVAL = 3;
 
 const PROCESS_TEMPLATES = [
     { name: "ЖУРНАЛ_КОНТУР", baseGeneration: 0.16, baseConsumption: 0.015, baseHealthDecay: 0.15 },
@@ -106,11 +108,14 @@ let shiftStarted = false;
 let shiftTick = 0;
 let startupLogIndex = 0;
 let incidentProcessId = null;
+let incidentQueue = [];
 let incidentCooldown = 0;
 let firstIncidentRaised = false;
 let passiveObservationBuffer = 0;
 let hasSavedGame = false;
 let resumePromptPending = false;
+let sleepModeActive = false;
+let lastFailureSummary = null;
 
 const STARTUP_LOGS = [
     "Фоновая инициализация завершена. Подсистемы работают в штатном режиме.",
@@ -213,8 +218,14 @@ const sysStatusText = document.getElementById("sys-status");
 const upgradeList = document.getElementById("upgrade-list");
 const upgradesSection = document.getElementById("upgrades-section");
 const briefingOverlay = document.getElementById("briefing-overlay");
+const briefingTitle = document.getElementById("briefing-title");
+const briefingGrid = document.getElementById("briefing-grid");
+const briefingResult = document.getElementById("briefing-result");
+const briefingResultLead = document.getElementById("briefing-result-lead");
+const briefingResultStats = document.getElementById("briefing-result-stats");
 const startShiftButton = document.getElementById("start-shift-btn");
 const newGameButton = document.getElementById("new-game-btn");
+const shareResultButton = document.getElementById("share-result-btn");
 const showBriefingButton = document.getElementById("show-briefing-btn");
 
 function readNumber(value, fallback) {
@@ -263,6 +274,22 @@ function getEmergencyThreshold() {
     return Math.max(10, Math.ceil(getStartingStability() * 0.36));
 }
 
+function getIncidentQueueIds() {
+    incidentQueue = incidentQueue.filter(id => processes.some(process => process.id === id && process.isActive && !process.isBroken));
+    incidentProcessId = incidentQueue.length > 0 ? incidentQueue[0] : null;
+    return incidentQueue;
+}
+
+function getQueuedIncidentProcess() {
+    const [nextId] = getIncidentQueueIds();
+    return Number.isInteger(nextId) ? processes.find(process => process.id === nextId) || null : null;
+}
+
+function resolveIncident(processId) {
+    incidentQueue = getIncidentQueueIds().filter(id => id !== processId);
+    incidentProcessId = incidentQueue.length > 0 ? incidentQueue[0] : null;
+}
+
 function getGenerationMultiplier() {
     return 1 + upgrades.generationBoost * 0.15;
 }
@@ -272,7 +299,7 @@ function getRepairCostMultiplier() {
 }
 
 function getStabilityRestore(process) {
-    return Math.max(1, Math.ceil((100 - process.health) / 18));
+    return Math.max(7, Math.ceil((100 - process.health) / 6));
 }
 
 function getUpgradeCost(key) {
@@ -389,9 +416,11 @@ function resetGameState() {
     shiftTick = 0;
     startupLogIndex = 0;
     incidentProcessId = null;
+    incidentQueue = [];
     incidentCooldown = 0;
     firstIncidentRaised = false;
     passiveObservationBuffer = 0;
+    sleepModeActive = false;
     initProcesses();
 }
 
@@ -416,9 +445,11 @@ function saveGame() {
         shiftTick,
         startupLogIndex,
         incidentProcessId,
+        incidentQueue,
         incidentCooldown,
         firstIncidentRaised,
-        passiveObservationBuffer
+        passiveObservationBuffer,
+        sleepModeActive
     }));
     hasSavedGame = true;
 }
@@ -449,9 +480,13 @@ function loadGame() {
         shiftTick = readNumber(gameState.shiftTick, 0);
         startupLogIndex = readNumber(gameState.startupLogIndex, 0);
         incidentProcessId = Number.isInteger(gameState.incidentProcessId) ? gameState.incidentProcessId : null;
+        incidentQueue = Array.isArray(gameState.incidentQueue)
+            ? gameState.incidentQueue.filter(id => Number.isInteger(id))
+            : incidentProcessId !== null ? [incidentProcessId] : [];
         incidentCooldown = readNumber(gameState.incidentCooldown, 0);
         firstIncidentRaised = gameState.firstIncidentRaised === true;
         passiveObservationBuffer = readNumber(gameState.passiveObservationBuffer, 0);
+        sleepModeActive = gameState.sleepModeActive === true;
         processes = Array.isArray(gameState.processes)
             ? gameState.processes.map((process, index) => normalizeProcess(process, index))
             : [];
@@ -590,7 +625,12 @@ function getIncidentCandidate() {
         : PROCESS_PHASES.error.severity;
 
     return processes
-        .filter(process => process.isActive && !process.isBroken && getProcessPhase(process).severity >= minSeverity)
+        .filter(process =>
+            process.isActive &&
+            !process.isBroken &&
+            !getIncidentQueueIds().includes(process.id) &&
+            getProcessPhase(process).severity >= minSeverity
+        )
         .sort((left, right) => {
             const severityDiff = getProcessPhase(right).severity - getProcessPhase(left).severity;
             if (severityDiff !== 0) {
@@ -602,16 +642,23 @@ function getIncidentCandidate() {
 }
 
 function addBackgroundSystemLog(weakest) {
-    if (incidentProcessId !== null) {
-        const incidentProcess = processes.find(process => process.id === incidentProcessId);
+    if (sleepModeActive) {
+        if (shiftTick % SLEEP_MODE_LOG_INTERVAL === 0) {
+            addSystemLog("СИСТЕМА", "Ожидание оператора. Контур удерживается в спящем режиме.", "service");
+        }
+        return;
+    }
+
+    const incidentProcess = getQueuedIncidentProcess();
+    if (incidentProcess) {
         if (!incidentProcess) {
             return;
         }
 
-        if (selectedProcessId === null && shiftTick - incidentProcess.lastReminderTick >= LOG_REMINDER_INTERVAL) {
+        if (shiftTick - incidentProcess.lastReminderTick >= LOG_REMINDER_INTERVAL) {
             addSystemLog(
                 incidentProcess.name,
-                `Ошибка активна. Ожидается ручное вмешательство. Состояние узла: ${Math.floor(incidentProcess.health)}%.`,
+                `Ошибка в очереди. Ожидается ручное вмешательство. Состояние узла: ${Math.floor(incidentProcess.health)}%.`,
                 getProcessPhase(incidentProcess).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
             );
             incidentProcess.lastReminderTick = shiftTick;
@@ -624,19 +671,46 @@ function addBackgroundSystemLog(weakest) {
     }
 }
 
-function failFirstLayer() {
-    shiftStarted = false;
+function enterSleepMode() {
+    if (sleepModeActive) {
+        stability = Math.max(stability, SLEEP_MODE_STABILITY_FLOOR);
+        return;
+    }
+
+    sleepModeActive = true;
+    stability = Math.max(stability, SLEEP_MODE_STABILITY_FLOOR);
     incidentProcessId = null;
+    incidentQueue = [];
     selectedProcessId = null;
     scannedProcessId = null;
+    addSystemLog("СИСТЕМА", "Контур переведён в спящий режим. Ожидание оператора.", "warning");
+}
+
+function exitSleepMode() {
+    if (!sleepModeActive) {
+        return;
+    }
+
+    sleepModeActive = false;
+    addSystemLog("СИСТЕМА", "Спящий режим снят оператором. Разрешено ручное вмешательство.", "operator");
+}
+
+function failFirstLayer() {
+    lastFailureSummary = {
+        layerCode: getCurrentLayerConfig().code,
+        observation,
+        knowledge,
+        cycles: defragCounter,
+        shiftTick
+    };
+
     clearSavedGame();
     resetGameState();
     seedArchiveLog();
     addSystemLog("КОНТУР-1", "Стабильность исчерпана. Испытательная смена завершена.", "critical");
     addSystemLog("ДОПУСК", "Решение дежурного признано неудовлетворительным. Допуск отозван.", "critical");
-    showBriefing();
-    startShiftButton.textContent = "Начать новую смену";
-    newGameButton.classList.add("is-hidden");
+    briefingOverlay.classList.add("is-visible");
+    renderBriefingOverlay();
 }
 
 function seedArchiveLog() {
@@ -656,8 +730,44 @@ function seedArchiveLog() {
     }
 }
 
-function showBriefing() {
-    briefingOverlay.classList.add("is-visible");
+function renderBriefingOverlay() {
+    const isFailure = lastFailureSummary !== null;
+
+    briefingGrid.classList.toggle("is-hidden", isFailure);
+    briefingResult.classList.toggle("is-hidden", !isFailure);
+    shareResultButton.classList.toggle("is-hidden", !isFailure);
+
+    if (isFailure) {
+        const summary = lastFailureSummary;
+        briefingTitle.textContent = "СМЕНА ПРЕКРАЩЕНА";
+        briefingResultLead.textContent = "Вы не справились и уволены. Допуск к контуру отозван, текущая смена аннулирована.";
+        briefingResultStats.innerHTML = "";
+
+        const lines = [
+            `Контур: ${summary.layerCode}`,
+            `Разобрано сбоев: ${summary.observation}`,
+            `Накоплено знания: ${summary.knowledge}`,
+            `Циклы: ${summary.cycles}`,
+            `Длина смены: ${summary.shiftTick} тиков`
+        ];
+
+        for (const line of lines) {
+            const row = document.createElement("p");
+            row.className = "briefing-result-line";
+            row.textContent = line;
+            briefingResultStats.appendChild(row);
+        }
+
+        startShiftButton.textContent = "Начать новую смену";
+        startShiftButton.classList.remove("is-hidden");
+        newGameButton.classList.add("is-hidden");
+        return;
+    }
+
+    briefingTitle.textContent = "ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ";
+    briefingResultLead.textContent = "";
+    briefingResultStats.innerHTML = "";
+
     if (hasSavedGame) {
         startShiftButton.textContent = resumePromptPending || shiftStarted ? "Продолжить текущую смену" : "Сесть за терминал";
         newGameButton.classList.remove("is-hidden");
@@ -667,13 +777,58 @@ function showBriefing() {
     }
 }
 
+function showBriefing() {
+    briefingOverlay.classList.add("is-visible");
+    lastFailureSummary = null;
+    renderBriefingOverlay();
+}
+
 function hideBriefing() {
     briefingOverlay.classList.remove("is-visible");
+}
+
+function buildFailureShareText() {
+    if (!lastFailureSummary) {
+        return "Смена завершена без доступной сводки.";
+    }
+
+    return [
+        "SYSTEM_LEGACY — смена прекращена",
+        "Вы не справились и уволены.",
+        `Контур: ${lastFailureSummary.layerCode}`,
+        `Разобрано сбоев: ${lastFailureSummary.observation}`,
+        `Знание: ${lastFailureSummary.knowledge}`,
+        `Циклы: ${lastFailureSummary.cycles}`,
+        `Длина смены: ${lastFailureSummary.shiftTick} тиков`
+    ].join("\n");
+}
+
+async function shareFailureResult() {
+    const text = buildFailureShareText();
+
+    try {
+        if (navigator.share) {
+            await navigator.share({ text });
+        } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            window.prompt("Скопируй результат смены:", text);
+            return;
+        }
+
+        shareResultButton.textContent = "Результат скопирован";
+        window.setTimeout(() => {
+            shareResultButton.textContent = "Поделиться результатом";
+        }, 1600);
+    } catch (error) {
+        console.error("Не удалось поделиться результатом:", error);
+    }
 }
 
 function startShift(options = {}) {
     const { forceNew = false } = options;
     const shouldResume = resumePromptPending && !forceNew;
+    lastFailureSummary = null;
 
     if (forceNew) {
         clearSavedGame();
@@ -692,11 +847,13 @@ function startShift(options = {}) {
         selectedProcessId = null;
         scannedProcessId = null;
         incidentProcessId = null;
+        incidentQueue = [];
         incidentCooldown = 0;
         shiftTick = 0;
         startupLogIndex = 0;
         firstIncidentRaised = false;
         passiveObservationBuffer = 0;
+        sleepModeActive = false;
 
         if (!alreadyStarted) {
             primeProcessesForShift();
@@ -761,15 +918,17 @@ function raiseIncident(process, message) {
     }
 
     observedProcessIds = observedProcessIds.filter(id => id !== process.id);
-    incidentProcessId = process.id;
+    if (!incidentQueue.includes(process.id)) {
+        incidentQueue.push(process.id);
+    }
+    incidentProcessId = incidentQueue[0] || null;
     firstIncidentRaised = true;
     process.lastReminderTick = shiftTick;
     addSystemLog(
         process.name,
-        message || "Узел переведён в очередь ручного вмешательства. Доступна ручная диагностика.",
+        message || "Узел переведён в очередь ручного вмешательства. Доступны команды: ДИАГНОСТИКА / ИСПРАВИТЬ.",
         getProcessPhase(process).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
     );
-    addSystemLog("СИСТЕМА", "Ожидается команда: ОТКРЫТЬ ОШИБКУ.", "operator");
     updateInterface();
     saveGame();
 }
@@ -795,20 +954,16 @@ function updateSelectedProcessSummary() {
 }
 
 function updateCommandVisibility() {
-    const hasSelection = shiftStarted && selectedProcessId !== null;
     const layer = getCurrentLayerConfig();
     const showDefrag = shiftStarted && observation >= layer.observationGoal;
-    const canScan = shiftStarted && selectedProcessId === null && (incidentProcessId !== null || stability <= getEmergencyThreshold());
-    const selectedProcess = getSelectedProcess();
-    const analyzed = isProcessAnalyzed(selectedProcess);
 
-    scanButton.classList.toggle("is-hidden", !canScan);
-    analyzeButton.classList.toggle("is-hidden", !hasSelection);
-    fixButton.classList.toggle("is-hidden", !hasSelection);
+    scanButton.classList.add("is-hidden");
+    analyzeButton.classList.toggle("is-hidden", !shiftStarted);
+    fixButton.classList.toggle("is-hidden", !shiftStarted);
     resetButton.classList.toggle("is-hidden", !showDefrag);
 
     if (analyzeButtonTitle) {
-        analyzeButtonTitle.textContent = analyzed ? "Диагностика завершена" : "Диагностика";
+        analyzeButtonTitle.textContent = "Диагностика";
     }
 }
 
@@ -857,8 +1012,6 @@ function renderUpgradePanel() {
 
 function updateInterface() {
     const layer = getCurrentLayerConfig();
-    const selectedProcess = getSelectedProcess();
-    const analyzedSelectedProcess = isProcessAnalyzed(selectedProcess);
 
     const maxStability = getStartingStability();
     const emergencyThreshold = getEmergencyThreshold();
@@ -875,6 +1028,9 @@ function updateInterface() {
     if (!shiftStarted) {
         sysStatusText.textContent = "ОЖИДАНИЕ";
         sysStatusText.style.color = "#c4cfc0";
+    } else if (sleepModeActive) {
+        sysStatusText.textContent = "СПЯЩИЙ РЕЖИМ";
+        sysStatusText.style.color = "#bad1a9";
     } else if (stability <= emergencyThreshold) {
         sysStatusText.textContent = "ПРЕДАВАРИЙНЫЙ РЕЖИМ";
         sysStatusText.style.color = "#bea46f";
@@ -884,14 +1040,16 @@ function updateInterface() {
     }
 
     sysStatusText.classList.remove("status-warning", "status-critical");
-    if (shiftStarted && stability <= Math.max(5, Math.floor(emergencyThreshold * 0.5))) {
+    if (shiftStarted && !sleepModeActive && stability <= Math.max(5, Math.floor(emergencyThreshold * 0.5))) {
         sysStatusText.classList.add("status-critical");
-    } else if (shiftStarted && stability <= emergencyThreshold) {
+    } else if (shiftStarted && !sleepModeActive && stability <= emergencyThreshold) {
         sysStatusText.classList.add("status-warning");
     }
 
     stabilityNote.classList.remove("danger-note");
-    if (!shiftStarted || stability >= Math.ceil(maxStability * 0.7)) {
+    if (sleepModeActive) {
+        stabilityNote.textContent = "Контур удерживается на минимальной стабильности. Ожидается ручное вмешательство оператора.";
+    } else if (!shiftStarted || stability >= Math.ceil(maxStability * 0.7)) {
         stabilityNote.textContent = "Контур удерживается в штатном диапазоне.";
     } else if (stability > emergencyThreshold) {
         stabilityNote.textContent = "Устойчивость снижается. Рекомендуется подготовить ручное вмешательство.";
@@ -907,9 +1065,9 @@ function updateInterface() {
             ? `Разбор завершён. Для допуска нужно удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`
             : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} сбоев и удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`;
 
-    scanButton.disabled = !shiftStarted;
-    analyzeButton.disabled = !shiftStarted || selectedProcessId === null || analyzedSelectedProcess;
-    fixButton.disabled = !shiftStarted || selectedProcessId === null;
+    scanButton.disabled = true;
+    analyzeButton.disabled = !shiftStarted;
+    fixButton.disabled = !shiftStarted;
     resetButton.disabled = !isDefragAvailable;
 
     updateSelectedProcessSummary();
@@ -945,35 +1103,22 @@ function purchaseUpgrade(key) {
 }
 
 function scanSystem() {
+    addSystemLog("СИСТЕМА", "Промежуточное открытие ошибки отключено. Используй команды ДИАГНОСТИКА или ИСПРАВИТЬ прямо по очереди сбоев.", "service");
+}
+
+function fixProcess() {
     if (!shiftStarted) {
         showBriefing();
         return;
     }
 
-    if (incidentProcessId === null && stability > getEmergencyThreshold()) {
-        addSystemLog("СИСТЕМА", "Сканирование пока не требуется. Ручная диагностика не запрошена.", "service");
-        return;
+    if (sleepModeActive) {
+        exitSleepMode();
     }
 
-    const target = processes.find(process => process.id === incidentProcessId) || getWeakestActiveProcess();
-    if (!target) {
-        addSystemLog("СИСТЕМА", "Сканирование не дало результата. Активных процессов не осталось.", "warning");
-        return;
-    }
-
-    selectedProcessId = target.id;
-    scannedProcessId = target.id;
-    updateInterface();
-
-    addOperatorLog(`Запущено сканирование узлов. Выбран ${target.name}, состояние ${Math.floor(target.health)}%. Доступны команды: ДИАГНОСТИКА / ОЧИСТИТЬ СБОЙ.`);
-
-    saveGame();
-}
-
-function fixProcess() {
-    const process = getSelectedProcess();
+    const process = getQueuedIncidentProcess();
     if (!process) {
-        addSystemLog("СИСТЕМА", "Сначала нужно открыть ошибку и перейти к аварийному узлу.", "warning");
+        addSystemLog("СИСТЕМА", "В очереди нет активных ошибок. Новое действие подскажет системный журнал.", "service");
         return;
     }
 
@@ -993,35 +1138,38 @@ function fixProcess() {
         return;
     }
 
-    const resolvedIncident = process.id === incidentProcessId;
     const stabilityRestore = getStabilityRestore(process);
 
     memory -= fixCost;
     process.health = 100;
     stability = Math.min(getStartingStability(), stability + stabilityRestore);
     scannedProcessId = null;
-    if (resolvedIncident) {
-        incidentProcessId = null;
-        incidentCooldown = stability <= getEmergencyThreshold() ? 1 : 4;
-    }
+    resolveIncident(process.id);
+    incidentCooldown = stability <= getEmergencyThreshold() ? 1 : 4;
     selectedProcessId = null;
     scannedProcessId = null;
     process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
 
-    addOperatorLog(`Запущена очистка сбоя ${process.name}. Расход резерва: ${fixCost} МБ.`);
-    addSystemLog(process.name, `Сбой очищен. Устойчивость контура +${stabilityRestore}.`, "operator");
-    if (resolvedIncident) {
-        addSystemLog("СИСТЕМА", "Срочная ошибка снята. Сбой закрыт без подробного разбора.", "service");
-    }
+    addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${fixCost} МБ.`);
+    addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
     refreshDefragAvailability();
     updateInterface();
     saveGame();
 }
 
 function analyzeProcess() {
-    const process = getSelectedProcess();
+    if (!shiftStarted) {
+        showBriefing();
+        return;
+    }
+
+    if (sleepModeActive) {
+        exitSleepMode();
+    }
+
+    const process = getQueuedIncidentProcess();
     if (!process) {
-        addSystemLog("СИСТЕМА", "Сначала нужно открыть ошибку и перейти к аварийному узлу.", "warning");
+        addSystemLog("СИСТЕМА", "В очереди нет активных ошибок. Новое действие подскажет системный журнал.", "service");
         return;
     }
 
@@ -1039,18 +1187,14 @@ function analyzeProcess() {
         observation += 1;
         observedProcessIds.push(process.id);
     }
-    const resolvedIncident = process.id === incidentProcessId;
+    resolveIncident(process.id);
+    incidentCooldown = stability <= getEmergencyThreshold() ? 1 : 3;
 
     addOperatorLog(`Запущена диагностика узла ${process.name}.`);
     if (alreadyObserved) {
         addSystemLog(process.name, "Повторный разбор завершён. Новый прогресс не получен.", "service");
     } else {
         addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
-    }
-
-    if (resolvedIncident) {
-        incidentProcessId = null;
-        incidentCooldown = stability <= getEmergencyThreshold() ? 1 : 3;
     }
     selectedProcessId = null;
     scannedProcessId = null;
@@ -1131,6 +1275,16 @@ function gameTick() {
         return;
     }
 
+    if (sleepModeActive) {
+        shiftTick += 1;
+        stability = Math.max(stability, SLEEP_MODE_STABILITY_FLOOR);
+        addBackgroundSystemLog(null);
+        refreshDefragAvailability({ announce: true });
+        updateInterface();
+        saveGame();
+        return;
+    }
+
     const layer = getCurrentLayerConfig();
     let memoryGain = 0;
     let stabilityLoss = 0;
@@ -1161,6 +1315,14 @@ function gameTick() {
         return;
     }
 
+    if (layer.id > FIRST_LAYER_FAILURE_ID && stability <= SLEEP_MODE_STABILITY_FLOOR && getIncidentQueueIds().length === 0) {
+        enterSleepMode();
+        refreshDefragAvailability({ announce: true });
+        updateInterface();
+        saveGame();
+        return;
+    }
+
     if (incidentCooldown > 0) {
         incidentCooldown -= 1;
     }
@@ -1172,9 +1334,7 @@ function gameTick() {
 
     const weakest = getWeakestActiveProcess();
     addBackgroundSystemLog(weakest);
-    const incidentCandidate = incidentProcessId === null && selectedProcessId === null
-        ? getIncidentCandidate()
-        : null;
+    const incidentCandidate = getIncidentCandidate();
 
     if (incidentCandidate) {
         const candidatePhase = getProcessPhase(incidentCandidate);
@@ -1184,8 +1344,8 @@ function gameTick() {
         raiseIncident(incidentCandidate, queueMessage);
     }
 
-    if (incidentProcessId !== null) {
-        stability = Math.max(0, stability - INCIDENT_STABILITY_PENALTY);
+    if (getIncidentQueueIds().length > 0) {
+        stability = Math.max(0, stability - INCIDENT_STABILITY_PENALTY * getIncidentQueueIds().length);
     }
 
     updatePassiveObservation();
@@ -1214,6 +1374,7 @@ newGameButton.addEventListener("click", () => {
 
     startShift({ forceNew: true });
 });
+shareResultButton.addEventListener("click", shareFailureResult);
 showBriefingButton.addEventListener("click", showBriefing);
 
 loadGame();

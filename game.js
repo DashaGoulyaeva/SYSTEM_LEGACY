@@ -206,6 +206,7 @@ const scanButton = document.getElementById("scan-btn");
 const analyzeButton = document.getElementById("analyze-btn");
 const fixButton = document.getElementById("fix-btn");
 const resetButton = document.getElementById("reset-btn");
+const analyzeButtonTitle = analyzeButton.querySelector(".cmd-title");
 const logContent = document.getElementById("log-content");
 const sysStatusText = document.getElementById("sys-status");
 const upgradeList = document.getElementById("upgrade-list");
@@ -713,6 +714,10 @@ function getSelectedProcess() {
     return processes.find(process => process.id === selectedProcessId) || null;
 }
 
+function isProcessAnalyzed(process) {
+    return !!process && observedProcessIds.includes(process.id);
+}
+
 function getRepairCost(process) {
     const baseCost = Math.max(2, Math.ceil((100 - process.health) / 12) + 1);
     return Math.ceil(baseCost * getRepairCostMultiplier());
@@ -797,10 +802,10 @@ function updateSelectedProcessSummary() {
     selectedProcessText.classList.remove("is-hidden");
     const restore = getStabilityRestore(process);
     const fixCost = getRepairCost(process);
-    const analyzed = observedProcessIds.includes(process.id);
+    const analyzed = isProcessAnalyzed(process);
     if (analyzed) {
         selectedProcessText.textContent =
-            `Выбран: ${process.name}. Сбой уже разобран. Очистка восстановит ${restore} ед. стабильности, расход резерва: ${fixCost} МБ.`;
+            `Выбран: ${process.name}. Сбой уже разобран. Новый прогресс по нему не получить. Доступна только очистка: ${fixCost} МБ, восстановление ${restore} ед. стабильности.`;
         return;
     }
 
@@ -812,11 +817,17 @@ function updateCommandVisibility() {
     const hasSelection = shiftStarted && selectedProcessId !== null;
     const showDefrag = shiftStarted && isDefragAvailable;
     const canScan = shiftStarted && selectedProcessId === null && (incidentProcessId !== null || stability <= getEmergencyThreshold());
+    const selectedProcess = getSelectedProcess();
+    const analyzed = isProcessAnalyzed(selectedProcess);
 
     scanButton.classList.toggle("is-hidden", !canScan);
     analyzeButton.classList.toggle("is-hidden", !hasSelection);
     fixButton.classList.toggle("is-hidden", !hasSelection);
     resetButton.classList.toggle("is-hidden", !showDefrag);
+
+    if (analyzeButtonTitle) {
+        analyzeButtonTitle.textContent = analyzed ? "Диагностика завершена" : "Диагностика";
+    }
 }
 
 function renderUpgradePanel() {
@@ -864,6 +875,8 @@ function renderUpgradePanel() {
 
 function updateInterface() {
     const layer = getCurrentLayerConfig();
+    const selectedProcess = getSelectedProcess();
+    const analyzedSelectedProcess = isProcessAnalyzed(selectedProcess);
 
     const maxStability = getStartingStability();
     const emergencyThreshold = getEmergencyThreshold();
@@ -917,7 +930,7 @@ function updateInterface() {
         : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} сбоев и снизить стабильность до ${layer.defragThreshold} / ${maxStability} или ниже.`;
 
     scanButton.disabled = !shiftStarted;
-    analyzeButton.disabled = !shiftStarted || selectedProcessId === null;
+    analyzeButton.disabled = !shiftStarted || selectedProcessId === null || analyzedSelectedProcess;
     fixButton.disabled = !shiftStarted || selectedProcessId === null;
     resetButton.disabled = !isDefragAvailable;
 

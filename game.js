@@ -6,6 +6,7 @@ const TICK_MS = 1000;
 const ARCHIVE_LOG_TARGET = 360;
 const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
+const INCIDENT_STABILITY_PENALTY = 0.45;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
 
@@ -759,6 +760,7 @@ function raiseIncident(process, message) {
         return;
     }
 
+    observedProcessIds = observedProcessIds.filter(id => id !== process.id);
     incidentProcessId = process.id;
     firstIncidentRaised = true;
     process.lastReminderTick = shiftTick;
@@ -788,16 +790,8 @@ function updateMetricVisibility() {
 }
 
 function updateSelectedProcessSummary() {
-    const process = getSelectedProcess();
-
-    if (!process) {
-        selectedProcessText.classList.remove("is-hidden");
-        selectedProcessText.textContent = "Следующее действие определяется по системному журналу.";
-        return;
-    }
-
-    selectedProcessText.classList.remove("is-hidden");
-    selectedProcessText.textContent = `Выбран узел: ${process.name}. Состояние: ${Math.floor(process.health)}%.`;
+    selectedProcessText.classList.add("is-hidden");
+    selectedProcessText.textContent = "";
 }
 
 function updateCommandVisibility() {
@@ -1188,6 +1182,10 @@ function gameTick() {
             ? "Ошибка переведена в очередь ручного вмешательства. Автокоррекция недоступна."
             : "Узел переведён в очередь ручной проверки. Ошибка может сформироваться без вмешательства.";
         raiseIncident(incidentCandidate, queueMessage);
+    }
+
+    if (incidentProcessId !== null) {
+        stability = Math.max(0, stability - INCIDENT_STABILITY_PENALTY);
     }
 
     updatePassiveObservation();

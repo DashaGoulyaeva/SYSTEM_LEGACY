@@ -564,7 +564,7 @@ function logProcessPhaseChange(process, previousPhase, nextPhase) {
     const healthText = `${Math.max(0, Math.floor(process.health))}%`;
 
     if (nextPhase.id === PROCESS_PHASES.wear.id) {
-        addSystemLog(process.name, `Рост остаточного износа. Узел вышел из штатного диапазона: ${healthText}.`, "warning");
+        addSystemLog(process.name, `Рост остаточного износа. Узел вышел из штатного диапазона: ${healthText}.`, "service");
         return;
     }
 

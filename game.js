@@ -666,6 +666,10 @@ function showBriefing() {
     }
 }
 
+function hideBriefing() {
+    briefingOverlay.classList.remove("is-visible");
+}
+
 function startShift(options = {}) {
     const { forceNew = false } = options;
     const shouldResume = resumePromptPending && !forceNew;

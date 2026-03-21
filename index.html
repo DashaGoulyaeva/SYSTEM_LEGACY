@@ -3,63 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYSTEM_LEGACY — Терминал</title>
-    <!-- Подключаем наш файл стилей и шрифт -->
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <title>SYSTEM_LEGACY — Терминал смены</title>
+    <link rel="stylesheet" href="style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Главный контейнер -->
-    <div class="terminal">
-        <!-- Заголовок и статус -->
-        <header>
-            <h1>> СИСТЕМА: HYPERION-7</h1>
-            <p class="status">Статус: <span id="sys-status">АКТИВНА</span></p>
-        </header>
-
-        <!-- Блок ресурсов: Стабильность и Память -->
-        <section class="resources">
-            <div class="resource">
-                <label>СТАБИЛЬНОСТЬ</label>
-                <!-- Прогресс-бар. value="85" max="100" = 85% -->
-                <progress id="stability-bar" value="85" max="100"></progress>
-                <span id="stability-text">85%</span>
+    <div class="briefing-overlay" id="briefing-overlay">
+        <section class="briefing-card">
+            <h1>ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ</h1>
+            <div class="briefing-grid">
+                <article class="briefing-block">
+                    <h2>ПОРЯДОК РАБОТЫ</h2>
+                    <ul>
+                        <li>В начале смены контролировать системный журнал.</li>
+                        <li>При появлении срочной ошибки открыть аварийный узел.</li>
+                        <li>После открытия узла выполнить диагностику или очистку сбоя.</li>
+                        <li>Глубокую дефрагментацию выполнять только после получения допуска.</li>
+                    </ul>
+                </article>
+                <article class="briefing-block">
+                    <h2>КОНТРОЛЬНЫЕ ПОКАЗАТЕЛИ</h2>
+                    <ul>
+                        <li><strong>Стабильность</strong> отражает текущее состояние системы.</li>
+                        <li><strong>Память</strong> используется при выполнении ручных операций.</li>
+                        <li><strong>Разбор сбоев</strong> определяет готовность контура к глубокой дефрагментации.</li>
+                        <li>Назначение отдельных контуров не раскрывается. В системе сохраняются остаточные модули управления объектами повышенной опасности.</li>
+                        <li>При неопределённости ориентироваться по системному журналу.</li>
+                    </ul>
+                </article>
             </div>
-            <div class="resource">
-                <label>ПАМЯТЬ</label>
-                <!-- Для памяти пока используем текстовый блок -->
-                <div class="value" id="memory-text">0 ГБ</div>
-            </div>
-        </section>
-
-        <!-- Панель основных команд-кнопок -->
-        <section class="controls">
-            <button id="scan-btn" class="cmd-btn">SCAN</button>
-            <button id="fix-btn" class="cmd-btn" disabled>FIX</button>
-            <button id="analyze-btn" class="cmd-btn" disabled>ANALYZE</button>
-            <button id="reset-btn" class="cmd-btn danger">DEEP_DEFRAG</button>
-        </section>
-
-        <!-- Сетка процессов 3x3 -->
-        <section class="process-grid">
-            <h3>> АКТИВНЫЕ ПРОЦЕССЫ:</h3>
-             <div id="process-grid-container">
-        <!-- Сюда будет вставлена сетка через JavaScript -->
-             </div>
-        </section>
-
-        <!-- Область системного лога (здесь будут появляться сообщения) -->
-        <section class="log">
-            <h3>> СИСТЕМНЫЙ ЖУРНАЛ:</h3>
-            <div id="log-content">
-                <!-- Первоначальные записи в логе -->
-                <p>> Инициализация терминала... УСПЕХ.</p>
-                <p>> Добро пожаловать, Оператор. Система ожидает команд.</p>
+            <div class="briefing-actions">
+                <button id="new-game-btn" class="ghost-btn is-hidden">Начать новую смену</button>
+                <button id="start-shift-btn" class="primary-btn">Сесть за терминал</button>
             </div>
         </section>
     </div>
 
-    <!-- Подключаем JavaScript в конце тела -->
-    <script src="game.js"></script>
+    <div class="app-shell">
+        <div class="terminal">
+            <header class="terminal-header">
+                <div class="header-main">
+                    <p class="eyebrow">Дежурная смена</p>
+                    <h1>СИСТЕМА: АРХИВНЫЙ КОНТУР-7</h1>
+                </div>
+                <div class="header-right">
+                    <div class="header-state">
+                        <span class="status-label">Состояние</span>
+                        <span id="sys-status" class="status-value">ОЖИДАНИЕ</span>
+                    </div>
+                    <button id="show-briefing-btn" class="ghost-btn">Инструктаж</button>
+                </div>
+            </header>
+
+            <main class="workspace">
+                <section class="log-panel">
+                    <div class="panel-head">
+                        <div>
+                            <h2>Системный журнал</h2>
+                        </div>
+                    </div>
+                    <div id="log-content" class="log-content"></div>
+                </section>
+
+                <aside class="summary-panel">
+                    <div class="summary-grid">
+                        <div class="metric-group-label metric-wide">Состояние системы</div>
+                        <div id="stability-metric" class="metric metric-wide">
+                            <span class="metric-label">Стабильность</span>
+                            <progress id="stability-bar" value="50" max="50"></progress>
+                            <span id="stability-text" class="metric-value">50 / 50</span>
+                            <span id="stability-note" class="metric-note">Контур удерживается в штатном диапазоне.</span>
+                        </div>
+
+                        <div class="metric-group-label metric-wide">Рабочие ресурсы</div>
+                        <div id="memory-metric" class="metric">
+                            <span class="metric-label">Резерв памяти</span>
+                            <span id="memory-text" class="metric-value">0 / 32 МБ</span>
+                        </div>
+
+                        <div id="observation-metric" class="metric">
+                            <span class="metric-label">Разобрано сбоев</span>
+                            <span id="observation-text" class="metric-value">0 / 0</span>
+                        </div>
+
+                        <div id="knowledge-metric" class="metric">
+                            <span class="metric-label">Знание</span>
+                            <span id="knowledge-text" class="metric-value">0</span>
+                        </div>
+
+                        <div id="cycle-metric" class="metric">
+                            <span class="metric-label">Циклы</span>
+                            <span id="cycle-text" class="metric-value">0</span>
+                        </div>
+
+                        <div id="layer-metric" class="metric metric-wide is-hidden">
+                            <span class="metric-label">Слой</span>
+                            <span id="layer-text" class="metric-value compact-value">1 / 9 · ПРИЕМКА</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-lines">
+                        <p id="defrag-hint" class="summary-line">Слой не готов к завершению.</p>
+                        <p id="selected-process-text" class="summary-line">Процесс не выбран.</p>
+                    </div>
+                </aside>
+            </main>
+
+            <section class="command-panel">
+                <div class="command-row">
+                    <button id="scan-btn" class="cmd-btn">
+                        <span class="cmd-title">Открыть ошибку</span>
+                    </button>
+                    <button id="analyze-btn" class="cmd-btn is-hidden">
+                        <span class="cmd-title">Диагностика</span>
+                    </button>
+                    <button id="fix-btn" class="cmd-btn is-hidden">
+                        <span class="cmd-title">Очистить сбой</span>
+                    </button>
+                    <button id="reset-btn" class="cmd-btn danger is-hidden">
+                        <span class="cmd-title">Глубокая дефрагментация</span>
+                    </button>
+                </div>
+            </section>
+
+            <section id="upgrades-section" class="upgrades-panel is-hidden">
+                <div class="panel-head compact">
+                    <div>
+                        <h2>Улучшения</h2>
+                    </div>
+                </div>
+                <div id="upgrade-list" class="upgrade-list"></div>
+            </section>
+        </div>
+    </div>
+
+    <script src="game.js?v=14"></script>
 </body>
 </html>

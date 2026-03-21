@@ -1,184 +1,544 @@
-/* Сброс отступов и задание базовых стилей */
+:root {
+    color-scheme: dark;
+    --bg: #040504;
+    --panel: rgba(7, 9, 7, 0.97);
+    --panel-soft: rgba(10, 13, 10, 0.98);
+    --line: #263026;
+    --line-strong: #5c7052;
+    --text: #c4cfc0;
+    --muted: #7e8979;
+    --green: #8eb47c;
+    --green-strong: #bad1a9;
+    --danger: #c97d7d;
+    --warning: #bea46f;
+    --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 * {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
 }
 
-/* Основные стили страницы */
 body {
-    background-color: #0a0a0a; /* Глубокий чёрный фон */
-    color: #00ff00;           /* Ярко-зелёный текст */
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.6;
-    padding: 20px;
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top, rgba(56, 74, 54, 0.14), transparent 18%),
+        linear-gradient(180deg, #020302 0%, #060806 55%, #030403 100%);
+    color: var(--text);
+    font-family: "JetBrains Mono", monospace;
+    line-height: 1.4;
 }
 
-/* Контейнер терминала */
-.terminal {
-    background-color: #111;
-    border: 1px solid #333;
-    border-radius: 5px;
-    padding: 30px;
-    max-width: 800px;
-    width: 100%;
-}
-
-/* Заголовки */
-h1 {
-    color: #00cc00;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-    font-size: 1.8em;
-}
-.status {
-    color: #aaa;
-    margin-bottom: 25px;
-}
-h3 {
-    color: #00cc00;
-    margin-bottom: 10px;
-}
-
-/* Секция ресурсов */
-.resources {
-    display: flex;
-    gap: 40px;
-    margin-bottom: 30px;
-}
-.resource {
-    flex: 1;
-}
-.resource label {
-    display: block;
-    color: #7cfc00; /* Салатовый для подписей */
-    margin-bottom: 8px;
-    font-size: 0.9em;
-}
-
-/* Стилизация прогресс-бара */
+button,
 progress {
-    width: 100%;
-    height: 25px;
-    background-color: #222;
-    border: 1px solid #333;
-}
-/* Цвет заполненной части (работает в Chrome/Edge) */
-progress::-webkit-progress-bar { background: #222; }
-progress::-webkit-progress-value { background: #00aa00; }
-
-/* Отображение числовых значений */
-#stability-text, .value {
-    display: block;
-    text-align: center;
-    font-size: 1.8em;
-    font-weight: bold;
-    margin-top: 5px;
-    color: #fff;
+    font: inherit;
 }
 
-/* Панель кнопок */
-.controls {
+.app-shell {
+    padding: 18px 28px;
+    height: 100vh;
+}
+
+.terminal {
+    position: relative;
+    width: min(1480px, calc(100vw - 72px));
+    height: calc(100vh - 36px);
+    margin: 0 auto;
+    padding: 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    box-shadow: var(--shadow), inset 0 0 0 1px rgba(120, 140, 112, 0.08);
+    background:
+        radial-gradient(circle at 18% 22%, rgba(155, 179, 138, 0.08), transparent 0 11px, rgba(155, 179, 138, 0.03) 12px, transparent 13px),
+        radial-gradient(circle at 76% 35%, rgba(155, 179, 138, 0.07), transparent 0 9px, rgba(155, 179, 138, 0.02) 10px, transparent 11px),
+        radial-gradient(circle at 63% 77%, rgba(155, 179, 138, 0.06), transparent 0 8px, rgba(155, 179, 138, 0.015) 9px, transparent 10px),
+        radial-gradient(circle at 27% 64%, rgba(255, 226, 154, 0.045), transparent 0 6px, rgba(255, 226, 154, 0.02) 7px, transparent 8px),
+        repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.024) 0,
+            rgba(255, 255, 255, 0.024) 1px,
+            transparent 1px,
+            transparent 3px
+        ),
+        linear-gradient(180deg, rgba(9, 11, 9, 0.99), rgba(5, 7, 5, 0.99));
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.terminal::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.38;
+    background:
+        radial-gradient(circle at 8% 12%, rgba(255, 255, 255, 0.06) 0 1px, transparent 2px),
+        radial-gradient(circle at 32% 68%, rgba(255, 255, 255, 0.05) 0 1px, transparent 2px),
+        radial-gradient(circle at 84% 21%, rgba(255, 255, 255, 0.055) 0 1px, transparent 2px),
+        radial-gradient(circle at 61% 82%, rgba(0, 0, 0, 0.22) 0 2px, transparent 3px),
+        linear-gradient(90deg, transparent 0, rgba(188, 208, 176, 0.03) 48%, transparent 100%),
+        repeating-linear-gradient(
+            180deg,
+            transparent 0,
+            transparent 2px,
+            rgba(0, 0, 0, 0.18) 3px,
+            transparent 4px
+        );
+    mix-blend-mode: screen;
+}
+
+.terminal::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow:
+        inset 0 0 44px rgba(0, 0, 0, 0.52),
+        inset 0 0 110px rgba(0, 0, 0, 0.34),
+        inset 0 -18px 40px rgba(124, 80, 50, 0.06);
+}
+
+.terminal-header,
+.log-panel,
+.summary-panel,
+.command-panel,
+.upgrades-panel,
+.briefing-card,
+.briefing-block {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(180deg, var(--panel-soft), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 2px;
+}
+
+.terminal-header {
     display: flex;
-    gap: 15px;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 8px 10px;
 }
-.cmd-btn {
-    background-color: #222;
-    color: #00ff00;
-    border: 1px solid #444;
-    padding: 15px 20px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1em;
-    cursor: pointer;
-    flex: 1;
-    min-width: 140px;
-    transition: background 0.2s;
+
+.eyebrow,
+.panel-kicker,
+.briefing-kicker,
+.status-label,
+.metric-label {
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
-.cmd-btn:hover {
-    background-color: #2a2a2a;
-}
-.cmd-btn:disabled {
-    background-color: #111;
-    color: #555;
-    border-color: #222;
-    cursor: not-allowed;
-}
-.cmd-btn.danger {
-    color: #ff5555;
-    border-color: #663333;
+
+.header-main h1 {
+    margin-top: 5px;
+    color: var(--green-strong);
+    font-size: clamp(1.02rem, 1.4vw, 1.3rem);
+    font-weight: 700;
+    text-shadow: 0 0 6px rgba(171, 194, 156, 0.12);
 }
 
-/* Область системного лога */
-.log {
-    background-color: #0a0a0a;
-    border: 1px solid #333;
-    padding: 20px;
-    border-radius: 3px;
+.header-right {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
 }
-#log-content {
-    font-size: 0.95em;
-    max-height: 300px;
-    overflow-y: auto; /* Добавляет прокрутку, если логов много */
+
+.header-state {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: right;
 }
-#log-content p {
-    margin-bottom: 8px;
-    color: #ccc;
-    border-bottom: 1px dashed #222;
-    padding-bottom: 8px;
+
+.status-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 4px 12px;
+    border: 1px solid var(--line-strong);
+    background: rgba(17, 22, 17, 0.96);
+    color: var(--green-strong);
 }
-#log-content p:last-child {
+
+.ghost-btn,
+.primary-btn,
+.cmd-btn {
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    background: rgba(15, 20, 15, 0.98);
+    color: var(--green-strong);
+    cursor: pointer;
+    transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.ghost-btn,
+.primary-btn {
+    min-height: 40px;
+    padding: 7px 12px;
+}
+
+.ghost-btn:hover,
+.primary-btn:hover,
+.cmd-btn:hover:not(:disabled) {
+    background: rgba(24, 31, 24, 0.98);
+    border-color: var(--green);
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.78fr) minmax(300px, 0.78fr);
+    gap: 8px;
+    min-height: 0;
+}
+
+.log-panel,
+.summary-panel,
+.command-panel,
+.upgrades-panel {
+    padding: 8px 10px;
+}
+
+.log-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel-head {
+    margin-bottom: 6px;
+}
+
+.panel-head h2 {
+    margin-top: 3px;
+    font-size: 0.92rem;
+    color: var(--green-strong);
+}
+
+.log-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.log-entry {
+    padding: 6px 0;
+    border-bottom: 1px dashed rgba(96, 115, 91, 0.22);
+    color: var(--text);
+    font-size: 0.86rem;
+    white-space: pre-wrap;
+    text-shadow: 0 0 3px rgba(169, 192, 154, 0.08);
+}
+
+.log-entry:last-child {
     border-bottom: none;
 }
 
-/* ==================== */
-/* СТИЛИ СЕТКИ ПРОЦЕССОВ */
-/* ==================== */
-.process-grid {
-    margin-bottom: 30px;
-}
-
-#process-grid-container {
+.summary-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 колонки */
-    gap: 10px;
-    margin-top: 15px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
 }
 
-.process {
-    border: 1px solid #333;
-    border-radius: 3px;
-    padding: 15px 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.1s;
-    min-height: 80px;
+.metric-group-label {
+    padding-top: 4px;
+    color: var(--muted);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(92, 112, 82, 0.38);
+}
+
+.metric {
+    padding: 7px;
+    border: 1px solid var(--line);
+    background: rgba(7, 10, 7, 0.96);
+}
+
+.metric-wide {
+    grid-column: 1 / -1;
+}
+
+.metric-value {
+    display: block;
+    margin-top: 5px;
+    color: #f0f3ec;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.metric-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.67rem;
+    line-height: 1.35;
+    color: var(--muted);
+}
+
+.danger-note {
+    color: #cf8c8c;
+}
+
+.compact-value {
+    font-size: 0.92rem;
+}
+
+progress {
+    width: 100%;
+    height: 12px;
+    margin-top: 6px;
+    border: none;
+    background: #1e251e;
+}
+
+progress::-webkit-progress-bar {
+    background: #1e251e;
+}
+
+progress::-webkit-progress-value {
+    background: linear-gradient(90deg, #557c47 0%, #99cf7b 100%);
+}
+
+progress::-moz-progress-bar {
+    background: linear-gradient(90deg, #557c47 0%, #99cf7b 100%);
+}
+
+.summary-lines {
+    margin-top: 8px;
+    display: grid;
+    gap: 5px;
+}
+
+.summary-line {
+    color: var(--muted);
+    font-size: 0.76rem;
+}
+
+.status-warning {
+    color: #ffd2a6 !important;
+    border-color: rgba(190, 164, 111, 0.88);
+    box-shadow: 0 0 14px rgba(190, 164, 111, 0.22);
+}
+
+.status-critical {
+    color: #ffd2d2 !important;
+    border-color: rgba(201, 125, 125, 0.95);
+    box-shadow: 0 0 18px rgba(201, 125, 125, 0.26);
+    animation: criticalPulse 1.25s steps(2, end) infinite;
+}
+
+@keyframes criticalPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 0.74;
+        transform: translateY(-1px);
+    }
+}
+
+.command-panel {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    justify-content: flex-end;
 }
 
-.process:hover {
-    transform: scale(1.02);
-    border-color: #555;
+.command-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
 }
 
-.process-name {
-    font-size: 0.85em;
-    font-weight: bold;
+.cmd-btn {
+    min-width: 178px;
+    padding: 10px 12px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+    display: block;
+}
+
+.cmd-btn:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.cmd-title {
+    display: block;
+    text-transform: uppercase;
+}
+
+.cmd-btn.danger {
+    color: #ffd8d8;
+    border-color: rgba(154, 88, 88, 0.76);
+    background: rgba(35, 16, 16, 0.98);
+}
+
+.upgrades-panel {
+    min-height: 0;
+}
+
+.upgrade-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.upgrade-card {
+    padding: 7px;
+    border: 1px solid var(--line);
+    background: rgba(7, 10, 7, 0.96);
+}
+
+.upgrade-card h4 {
     margin-bottom: 5px;
-    color: #fff;
-    text-shadow: 0 0 5px rgba(0,0,0,0.7);
+    color: var(--green-strong);
+    font-size: 0.82rem;
 }
 
-.process-health {
-    font-size: 1.2em;
-    font-weight: bold;
+.upgrade-card p,
+.upgrade-meta {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.upgrade-meta {
+    margin: 7px 0;
+}
+
+.is-hidden {
+    display: none !important;
+}
+
+.briefing-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(3, 5, 3, 0.88);
+    backdrop-filter: blur(4px);
+}
+
+.briefing-overlay.is-visible {
+    display: flex;
+}
+
+.briefing-card {
+    width: min(860px, 100%);
+    padding: 16px;
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow);
+}
+
+.briefing-card h1 {
+    margin: 8px 0 12px;
+    color: var(--green-strong);
+    font-size: clamp(1.45rem, 2.5vw, 2rem);
+}
+
+.briefing-lead {
+    max-width: 680px;
+}
+
+.briefing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.briefing-block {
+    padding: 10px;
+}
+
+.briefing-block h2 {
+    margin-bottom: 7px;
+    color: var(--green-strong);
+    font-size: 0.9rem;
+}
+
+.briefing-block ul {
+    padding-left: 18px;
+}
+
+.briefing-block li + li {
+    margin-top: 5px;
+}
+
+.briefing-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+@media (max-width: 1180px) {
+    body {
+        overflow: auto;
+    }
+
+    .app-shell {
+        height: auto;
+    }
+
+    .terminal {
+        height: auto;
+    }
+
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .command-panel {
+        justify-content: flex-start;
+    }
+
+    .command-row {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 820px) {
+    .app-shell {
+        padding: 10px;
+    }
+
+    .terminal {
+        width: calc(100vw - 20px);
+        height: auto;
+    }
+
+    .terminal-header {
+        flex-direction: column;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .summary-grid,
+    .upgrade-list,
+    .briefing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body {
+        overflow: auto;
+    }
 }

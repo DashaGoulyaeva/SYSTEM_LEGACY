@@ -7,6 +7,7 @@ const ARCHIVE_LOG_TARGET = 360;
 const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
 const INCIDENT_STABILITY_PENALTY = 1.2;
+const PROCESS_DECAY_FACTOR = 3.4;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
 const SLEEP_MODE_STABILITY_FLOOR = 5;
@@ -564,7 +565,7 @@ function logProcessPhaseChange(process, previousPhase, nextPhase) {
     const healthText = `${Math.max(0, Math.floor(process.health))}%`;
 
     if (nextPhase.id === PROCESS_PHASES.wear.id) {
-        addSystemLog(process.name, `Рост остаточного износа. Узел вышел из штатного диапазона: ${healthText}.`, "service");
+        addSystemLog(process.name, `Рост остаточного износа. Узел вышел из штатного диапазона: ${healthText}.`, "noise");
         return;
     }
 
@@ -929,6 +930,7 @@ function raiseIncident(process, message) {
         message || "Узел переведён в очередь ручного вмешательства. Доступны команды: ДИАГНОСТИКА / ИСПРАВИТЬ.",
         getProcessPhase(process).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
     );
+    addSystemLog("ОЧЕРЕДЬ", `Ошибок в очереди: ${incidentQueue.length}. Следующий узел: ${process.name}.`, "operator");
     updateInterface();
     saveGame();
 }
@@ -1152,6 +1154,7 @@ function fixProcess() {
 
     addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${fixCost} МБ.`);
     addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
+    addSystemLog("ОЧЕРЕДЬ", `После исправления в очереди осталось: ${getIncidentQueueIds().length}.`, "service");
     refreshDefragAvailability();
     updateInterface();
     saveGame();
@@ -1196,6 +1199,7 @@ function analyzeProcess() {
     } else {
         addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
     }
+    addSystemLog("ОЧЕРЕДЬ", `После диагностики в очереди осталось: ${getIncidentQueueIds().length}.`, "service");
     selectedProcessId = null;
     scannedProcessId = null;
 
@@ -1297,7 +1301,7 @@ function gameTick() {
 
         memoryGain += process.baseGeneration * 0.3 * getGenerationMultiplier();
         stabilityLoss += process.baseConsumption * layer.consumptionMultiplier * STABILITY_DRAIN_FACTOR;
-        process.health = Math.max(0, process.health - process.baseHealthDecay * layer.healthDecayMultiplier);
+        process.health = Math.max(0, process.health - process.baseHealthDecay * layer.healthDecayMultiplier * PROCESS_DECAY_FACTOR);
 
         if (process.health <= 0) {
             process.isBroken = true;

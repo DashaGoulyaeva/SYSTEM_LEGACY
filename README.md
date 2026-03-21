@@ -1,32 +1,62 @@
 # SYSTEM_LEGACY
 
-> A quiet incremental about memory, servers, and what remains when everything else is gone.
+> A browser incremental about observation, decay, and the memory left inside old systems.
 
-You are the new caretaker. Your task is simple: keep the ancient server cluster **HYPERION-7** operational. Click. Scan. Fix. Reboot.
+`SYSTEM_LEGACY` is a solo-developed narrative incremental built with vanilla `JavaScript`, `HTML`, and `CSS`.
+You enter an already running terminal shift, watch the system log, react to incidents, stabilize failing processes, and descend layer by layer through an aging archival machine.
 
-In time, the routine cracks. Fragments of someone else's memories appear in the system logs, process names take on personal meanings, and the system's stability begins to depend on something more than just code.
+The project is designed around a dry, technical first impression.
+The story is not front-loaded. It leaks through repeated actions, system behavior, naming, pacing, and the tension between routine maintenance and something more personal hidden underneath.
 
-This game is a meditative experience, not a race. There are no timers, leaderboards, or pressure. Just you, a terminal, and the quiet hum of a machine that seems to be trying to remember something.
+## Current Playable Slice
 
-## What's Inside?
-*   **Minimalist Interface:** Green text on black. Nothing extra.
-*   **Deep Cycles:** Each reboot (defragmentation) reveals a new layer of understanding of the system and its past.
-*   **A Story That Unfolds, Not Tells:** The narrative is hidden in logic anomalies, file names, and your actions.
-*   **Complete Peace:** Play at your own pace. The world can wait.
+The current prototype focuses on the first playable segment of the game:
 
-## How to Start?
-For now, project exists only locally and not ready to accept players.
+- log-first onboarding instead of a blank static screen
+- active shift flow with briefing, incidents, scan, analyze, repair, and deep defragmentation
+- layered progression model with the first three layers defined and a total target structure of nine layers
+- resource split between `stability`, `memory`, `observation`, and `knowledge`
+- save and resume support through `localStorage`
+- late-cycle upgrade panel for persistent progression
 
----
+## Design Direction
 
-### 🛠️ For Developers & The Curious
-**SYSTEM_LEGACY** is primarily a **learning project** and a creative experiment by a solo developer.
+This project is built around a few fixed principles:
 
-> **Important Note:** The game is in active development. Its concept, mechanics, and direction may change radically as the author learns and experiments. What you see today may become something completely different tomorrow.
+- the log is the main surface of the game
+- early layers should stay dry, technical, and slightly unwelcoming
+- meaning should emerge from observation, not exposition
+- the game is still an incremental at its core, even when the narrative becomes denser
 
-*   **Tech Stack:** Vanilla JS, HTML, CSS. No frameworks.
-*   **Philosophy:** Maximum simplicity, atmosphere, narrative through gameplay.
-*   **Status:** In development. The most valuable resource here is not the system's memory, but the author's time and ideas.
-*   **Devlog:** You can peek into the [DEVLOG](./DEVLOG.md) to see how the project is born and evolves.
+## Tech Stack
 
-If this aesthetic resonates with you — welcome. Take a seat. Listen to the hum of the systems. You might hear something familiar in it.
+- Vanilla `JavaScript`
+- `HTML`
+- `CSS`
+- No frameworks
+- No build step
+
+## Run Locally
+
+Open [index.html](./index.html) in a browser.
+
+At the moment the project is meant to be played locally while the early layers are being shaped and balanced.
+
+## Project Status
+
+`SYSTEM_LEGACY` is in active development.
+Right now the main goal is to make the first layer work as an actual game loop:
+
+- the player enters a living system instead of an empty interface
+- the log calls attention before the buttons do
+- the basic incremental rhythm is readable
+- the first layers hold together before deeper narrative material is added
+
+## Documentation
+
+- Development log: [DEVLOG.md](./DEVLOG.md)
+- Russian readme: [README_RU.md](./README_RU.md)
+- Russian devlog: [DEVLOG_RU.md](./DEVLOG_RU.md)
+
+If the terminal aesthetic resonates with you, take a seat and watch the log for a while.
+That is where the game really starts.

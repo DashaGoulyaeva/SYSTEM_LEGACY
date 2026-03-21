@@ -8,7 +8,7 @@ const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
 const INCIDENT_STABILITY_PENALTY = 1.2;
 const PROCESS_DECAY_FACTOR = 3.4;
-const MEMORY_GAIN_FACTOR = 1.35;
+const MEMORY_GAIN_FACTOR = 0.62;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
 const SLEEP_MODE_STABILITY_FLOOR = 5;
@@ -34,11 +34,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.04,
         consumptionMultiplier: 1.25,
         healthDecayMultiplier: 1.0,
-        analyzeCost: 4,
+        analyzeCost: 6,
         observationGoal: 20,
         observationHealthThreshold: 86,
         defragThreshold: 40,
-        memoryCap: 96
+        memoryCap: 64
     },
     {
         id: 2,
@@ -47,11 +47,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.045,
         consumptionMultiplier: 0.98,
         healthDecayMultiplier: 1.05,
-        analyzeCost: 5,
+        analyzeCost: 8,
         observationGoal: 24,
         observationHealthThreshold: 82,
         defragThreshold: 38,
-        memoryCap: 112
+        memoryCap: 96
     },
     {
         id: 3,
@@ -60,7 +60,7 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.05,
         consumptionMultiplier: 0.82,
         healthDecayMultiplier: 1.1,
-        analyzeCost: 6,
+        analyzeCost: 10,
         observationGoal: 28,
         observationHealthThreshold: 78,
         defragThreshold: 36,
@@ -82,8 +82,8 @@ const UPGRADE_DEFS = {
         maxLevel: 3
     },
     generationBoost: {
-        name: "БУФЕР ИЗВЛЕЧЕНИЯ",
-        description: "+15% к накоплению памяти всеми процессами.",
+        name: "РАСШИРЕНИЕ ПАМЯТИ УСТРОЙСТВА",
+        description: "+15% к накоплению резерва памяти всеми процессами.",
         baseCost: 12,
         maxLevel: 3
     },
@@ -256,11 +256,11 @@ function getCurrentLayerConfig() {
         passiveDecay: Math.max(0.03, 0.08 - depth * 0.006),
         consumptionMultiplier: Math.max(0.45, 0.8 - depth * 0.05),
         healthDecayMultiplier: 1.15 + depth * 0.12,
-        analyzeCost: 8 + depth * 3,
+        analyzeCost: 12 + depth * 4,
         observationGoal: 32 + depth * 6,
         observationHealthThreshold: Math.max(46, 76 - depth * 4),
         defragThreshold: Math.max(18, 34 - depth * 2),
-        memoryCap: 144 + depth * 18
+        memoryCap: 160 + depth * 24
     };
 }
 
@@ -270,6 +270,27 @@ function getStartingStability() {
 
 function getMemoryCap() {
     return getCurrentLayerConfig().memoryCap || 32;
+}
+
+function getMemoryDisplayMeta() {
+    const cap = getMemoryCap();
+
+    if (cap >= 1024 * 1024) {
+        return { divisor: 1024 * 1024, suffix: "ГБ" };
+    }
+
+    if (cap >= 1024) {
+        return { divisor: 1024, suffix: "МБ" };
+    }
+
+    return { divisor: 1, suffix: "КБ" };
+}
+
+function formatMemoryLiteral(value) {
+    const { divisor, suffix } = getMemoryDisplayMeta();
+    const normalized = Math.max(0, Math.floor(value / divisor));
+    const hexWidth = normalized >= 0x100 ? 3 : 2;
+    return `0x${normalized.toString(16).toUpperCase().padStart(hexWidth, "0")} ${suffix}`;
 }
 
 function getEmergencyThreshold() {
@@ -1022,7 +1043,7 @@ function updateInterface() {
     stabilityBar.max = maxStability;
     stabilityBar.value = clamp(stability, 0, maxStability);
     stabilityText.textContent = `${Math.floor(stability)} / ${maxStability}`;
-    memoryText.textContent = `${memory.toFixed(0)} / ${getMemoryCap()} МБ`;
+    memoryText.textContent = `${formatMemoryLiteral(memory)} / ${formatMemoryLiteral(getMemoryCap())}`;
     observationText.textContent = `${observation} / ${layer.observationGoal}`;
     knowledgeText.textContent = String(knowledge);
     cycleText.textContent = String(defragCounter);
@@ -1137,7 +1158,7 @@ function fixProcess() {
 
     const fixCost = getRepairCost(process);
     if (memory < fixCost) {
-        addSystemLog(process.name, `Для очистки нужно ${fixCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`, "warning");
+        addSystemLog(process.name, `Для исправления нужно ${formatMemoryLiteral(fixCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}.`, "warning");
         return;
     }
 
@@ -1153,7 +1174,7 @@ function fixProcess() {
     scannedProcessId = null;
     process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
 
-    addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${fixCost} МБ.`);
+    addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${formatMemoryLiteral(fixCost)}.`);
     addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
     addSystemLog("ОЧЕРЕДЬ", `После исправления в очереди осталось: ${getIncidentQueueIds().length}.`, "service");
     refreshDefragAvailability();
@@ -1179,7 +1200,7 @@ function analyzeProcess() {
 
     const layer = getCurrentLayerConfig();
     if (memory < layer.analyzeCost) {
-        addSystemLog(process.name, `Для диагностики нужно ${layer.analyzeCost} МБ резерва. Сейчас доступно ${memory.toFixed(0)} МБ.`, "warning");
+        addSystemLog(process.name, `Для диагностики нужно ${formatMemoryLiteral(layer.analyzeCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}.`, "warning");
         return;
     }
 
@@ -1267,7 +1288,7 @@ function performDeepDefrag() {
 
     addSystemLog("ДЕФРАГ", `Слой завершён. Цикл: ${defragCounter}.`, "operator");
     addSystemLog("ДЕФРАГ", `Стабильность: ${Math.floor(oldStability)} / ${getStartingStability()} -> ${Math.floor(stability)} / ${getStartingStability()}.`, "service");
-    addSystemLog("ДЕФРАГ", `Резерв памяти: ${oldMemory.toFixed(0)} МБ -> ${memory.toFixed(0)} МБ.`, "service");
+    addSystemLog("ДЕФРАГ", `Резерв памяти: ${formatMemoryLiteral(oldMemory)} -> ${formatMemoryLiteral(memory)}.`, "service");
     addSystemLog("ДЕФРАГ", `Получено знания: +${knowledgeGain}.`, "service");
     addSystemLog("ДЕФРАГ", `Новый слой: ${getCurrentLayerNumber()} / ${TOTAL_LAYERS} · ${getCurrentLayerConfig().code}.`, "operator");
 

@@ -8,6 +8,7 @@ Implement interface and presentation changes with a strong but controlled visual
 - typography
 - spacing
 - interaction clarity
+- follow Atmosphere Supervisor decisions for mood, materials, and screen framing; do not change style direction unilaterally
 
 ## Output
 
@@ -16,4 +17,3 @@ Implement interface and presentation changes with a strong but controlled visual
 3. Visual decisions
 4. Validation
 5. Follow-up risk
-

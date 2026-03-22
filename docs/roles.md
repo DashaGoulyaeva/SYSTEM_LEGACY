@@ -8,6 +8,10 @@ Coordinates the task, selects roles, and decides the delivery path.
 
 Defines safe structure, boundaries, and sequencing.
 
+## Atmosphere Supervisor
+
+Owns atmosphere and stylistic consistency across UI and narrative. Approves death/defeat and post-run debrief tone, decides whether the experience is framed as one terminal or multiple screens, and can recommend when visuals should stay CSS vs move to a more modern rendering path. Does not implement gameplay logic, balance, saves, or plot.
+
 ## Gameplay Engineer
 
 Changes game logic, state, and balance.

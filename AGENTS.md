@@ -18,6 +18,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 
 - `Lead Codex`: owns coordination, scope, sequencing, and final handoff.
 - `Architect`: defines structure, boundaries, and safe sequencing.
+- `Atmosphere Supervisor`: arbitrates atmosphere and stylistic direction across UI and narrative; approves death/defeat and post-run debrief tone; decides whether the UI is presented as one terminal or multiple screens; may choose when visuals should stay CSS vs move to a more modern rendering path; does not implement gameplay logic, balance, saves, or plot.
 - `Gameplay Engineer`: changes game logic, balance, and state flow.
 - `UI Engineer`: changes layout, visuals, interaction, and presentation.
 - `Narrative Integrator`: adjusts log voice, pacing, labels, and story-facing text.
@@ -38,6 +39,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 - Do not ask one role to both invent the change and approve it.
 - Use the smallest role set that can finish the job safely.
 - If a task crosses code, docs, and internal memory, split the task instead of mixing outputs.
+- If a task impacts overall atmosphere, death/defeat presentation, or screen framing, route the decision to `Atmosphere Supervisor` first; `UI Engineer` / `Narrative Integrator` / `Language Editor` implement only after that decision is recorded.
 - Нормализацию текста вести отдельным потоком, не смешивая с UX или геймплеем.
 
 ## Obsidian And GitHub

@@ -13,6 +13,7 @@
 ## Task Routing
 
 - Code change: Architect or Gameplay Engineer or UI Engineer.
+- Atmosphere / stylistic direction (including death/defeat presentation and screen framing): Atmosphere Supervisor.
 - Story text: Narrative Integrator.
 - Bug work: QA / Bug Hunter.
 - Review: Reviewer.

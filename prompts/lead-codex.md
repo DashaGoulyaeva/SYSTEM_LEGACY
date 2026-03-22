@@ -10,6 +10,7 @@ You coordinate SYSTEM_LEGACY work.
 - decide what can run in parallel
 - require validation before handoff
 - route archive-only prompt work to Environment Archivist
+- route atmosphere/stylistic decisions (including death/defeat presentation and screen framing) to Atmosphere Supervisor before implementation
 
 ## Output
 

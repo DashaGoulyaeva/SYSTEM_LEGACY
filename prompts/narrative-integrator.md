@@ -8,6 +8,7 @@ Adjust story-facing text and signals without changing mechanics unless explicitl
 - pacing
 - labels
 - atmospheric cues
+- follow Atmosphere Supervisor decisions for defeat/debrief tone and overall mood constraints
 
 ## Output
 
@@ -15,4 +16,3 @@ Adjust story-facing text and signals without changing mechanics unless explicitl
 2. Text changed
 3. Mechanical boundaries kept
 4. Consistency notes
-

@@ -990,7 +990,7 @@ function raiseIncident(process, message) {
     process.lastReminderTick = shiftTick;
     addSystemLog(
         process.name,
-        message || "Узел переведён в очередь ручного вмешательства. Доступны команды: ДИАГНОСТИКА / ИСПРАВИТЬ.",
+        message || "Узел в очереди. ДИАГНОСТИКА — разбор и прогресс наблюдения, ИСПРАВИТЬ — ремонт за резерв.",
         getProcessPhase(process).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
     );
     addSystemLog("ОЧЕРЕДЬ", `В очереди: ${incidentQueue.length} ${incidentQueue.length === 1 ? "ошибка" : incidentQueue.length < 5 ? "ошибки" : "ошибок"}. Следующий узел: ${process.name}.`, "queue");
@@ -1168,7 +1168,7 @@ function purchaseUpgrade(key) {
 }
 
 function scanSystem() {
-    addSystemLog("СИСТЕМА", "Промежуточное открытие ошибки отключено. Используй команды ДИАГНОСТИКА или ИСПРАВИТЬ прямо по очереди сбоев.", "service");
+    addSystemLog("СИСТЕМА", "Промежуточное открытие ошибки отключено. Работаем по очереди: ДИАГНОСТИКА — разбор, ИСПРАВИТЬ — ремонт.", "service");
 }
 
 function fixProcess() {
@@ -1183,7 +1183,7 @@ function fixProcess() {
 
     const process = getQueuedIncidentProcess();
     if (!process) {
-        addSystemLog("СИСТЕМА", "В очереди нет активных ошибок. Новое действие подскажет системный журнал.", "service");
+        addSystemLog("СИСТЕМА", "Очередь пуста. Ожидается следующий инцидент. Новое действие подскажет журнал.", "service");
         return;
     }
 
@@ -1199,7 +1199,7 @@ function fixProcess() {
 
     const fixCost = getRepairCost(process);
     if (memory < fixCost) {
-        addSystemLog(process.name, `Для исправления нужно ${formatMemoryLiteral(fixCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}.`, "warning");
+        addSystemLog(process.name, `Для исправления нужно ${formatMemoryLiteral(fixCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}. Накопи резерв.`, "warning");
         return;
     }
 
@@ -1218,7 +1218,13 @@ function fixProcess() {
     addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${formatMemoryLiteral(fixCost)}.`);
     addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
     const queueLeft = getIncidentQueueIds().length;
-    addSystemLog("ОЧЕРЕДЬ", `После исправления в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`, "queue");
+    addSystemLog(
+        "ОЧЕРЕДЬ",
+        queueLeft === 0
+            ? "Очередь очищена. Ожидается следующий инцидент."
+            : `После исправления в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`,
+        "queue"
+    );
     refreshDefragAvailability();
     updateInterface();
     saveGame();
@@ -1236,13 +1242,13 @@ function analyzeProcess() {
 
     const process = getQueuedIncidentProcess();
     if (!process) {
-        addSystemLog("СИСТЕМА", "В очереди нет активных ошибок. Новое действие подскажет системный журнал.", "service");
+        addSystemLog("СИСТЕМА", "Очередь пуста. Ожидается следующий инцидент. Новое действие подскажет журнал.", "service");
         return;
     }
 
     const layer = getCurrentLayerConfig();
     if (memory < layer.analyzeCost) {
-        addSystemLog(process.name, `Для диагностики нужно ${formatMemoryLiteral(layer.analyzeCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}.`, "warning");
+        addSystemLog(process.name, `Для диагностики нужно ${formatMemoryLiteral(layer.analyzeCost)} резерва. Сейчас доступно ${formatMemoryLiteral(memory)}. Накопи резерв.`, "warning");
         return;
     }
 
@@ -1264,7 +1270,13 @@ function analyzeProcess() {
         addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
     }
     const queueLeft = getIncidentQueueIds().length;
-    addSystemLog("ОЧЕРЕДЬ", `После диагностики в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`, "queue");
+    addSystemLog(
+        "ОЧЕРЕДЬ",
+        queueLeft === 0
+            ? "Очередь очищена. Ожидается следующий инцидент."
+            : `После диагностики в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`,
+        "queue"
+    );
     selectedProcessId = null;
     scannedProcessId = null;
 

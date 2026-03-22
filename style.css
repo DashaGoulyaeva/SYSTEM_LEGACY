@@ -11,6 +11,8 @@
     --green-strong: #bad1a9;
     --danger: #c97d7d;
     --warning: #bea46f;
+    --queue: #9cc9bf;
+    --queue-bg: rgba(14, 30, 30, 0.35);
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     --glass-glow: rgba(186, 209, 169, 0.08);
     --glass-dust: rgba(217, 202, 160, 0.06);
@@ -244,14 +246,17 @@ progress {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 6px;
+    scrollbar-color: rgba(140, 160, 130, 0.5) transparent;
+    scrollbar-width: thin;
 }
 
 .log-entry {
-    padding: 6px 0;
+    padding: 8px 4px;
     border-bottom: 1px dashed rgba(96, 115, 91, 0.22);
     color: var(--text);
-    font-size: 0.86rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
     white-space: pre-wrap;
     text-shadow: 0 0 3px rgba(169, 192, 154, 0.08);
 }
@@ -287,8 +292,11 @@ progress {
 }
 
 .log-entry-queue {
-    color: #9cc9bf;
+    color: var(--queue);
     border-bottom-color: rgba(124, 177, 165, 0.36);
+    background: var(--queue-bg);
+    border-left: 2px solid rgba(124, 177, 165, 0.55);
+    padding-left: 10px;
     text-shadow: 0 0 6px rgba(112, 171, 157, 0.12);
     letter-spacing: 0.03em;
 }
@@ -296,23 +304,32 @@ progress {
 .log-entry-warning {
     color: #dcc38d;
     border-bottom-color: rgba(190, 164, 111, 0.42);
+    background: rgba(30, 24, 10, 0.28);
+    border-left: 2px solid rgba(190, 164, 111, 0.55);
+    padding-left: 10px;
 }
 
 .log-entry-alert {
     color: #efb0a4;
     border-bottom-color: rgba(201, 125, 125, 0.45);
+    background: rgba(35, 16, 16, 0.28);
+    border-left: 2px solid rgba(201, 125, 125, 0.55);
+    padding-left: 10px;
 }
 
 .log-entry-critical {
     color: #ffd0d0;
     border-bottom-color: rgba(201, 125, 125, 0.65);
+    background: rgba(50, 18, 18, 0.34);
+    border-left: 2px solid rgba(255, 160, 160, 0.55);
+    padding-left: 10px;
     text-shadow: 0 0 8px rgba(201, 125, 125, 0.18);
 }
 
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 8px;
 }
 
 .metric-group-label {
@@ -325,7 +342,7 @@ progress {
 }
 
 .metric {
-    padding: 7px;
+    padding: 8px;
     border: 1px solid var(--line);
     background: rgba(7, 10, 7, 0.96);
 }
@@ -386,7 +403,8 @@ progress::-moz-progress-bar {
 
 .summary-line {
     color: var(--muted);
-    font-size: 0.76rem;
+    font-size: 0.8rem;
+    line-height: 1.45;
 }
 
 .status-warning {
@@ -418,22 +436,24 @@ progress::-moz-progress-bar {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    border-top: 1px solid rgba(92, 112, 82, 0.3);
+    padding-top: 6px;
 }
 
 .command-row {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
 }
 
 .cmd-btn {
-    min-width: 178px;
-    padding: 10px 12px;
-    font-size: 0.74rem;
+    min-width: 168px;
+    padding: 10px 14px;
+    font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     text-align: center;
     display: block;
 }
@@ -452,6 +472,20 @@ progress::-moz-progress-bar {
     color: #ffd8d8;
     border-color: rgba(154, 88, 88, 0.76);
     background: rgba(35, 16, 16, 0.98);
+}
+
+#analyze-btn.cmd-btn {
+    background: rgba(18, 30, 18, 0.98);
+    border-color: rgba(142, 180, 124, 0.9);
+    color: #e3f2d7;
+    box-shadow: 0 0 0 1px rgba(142, 180, 124, 0.16);
+}
+
+#fix-btn.cmd-btn {
+    background: rgba(30, 24, 10, 0.96);
+    border-color: rgba(190, 164, 111, 0.9);
+    color: #f3e2b6;
+    box-shadow: 0 0 0 1px rgba(190, 164, 111, 0.16);
 }
 
 .upgrades-panel {

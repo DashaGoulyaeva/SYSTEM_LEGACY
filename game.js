@@ -1,6 +1,7 @@
 console.log("Терминал смены загружен.");
 
 const SAVE_KEY = "systemLegacySaveV2";
+const SAVE_SCHEMA_VERSION = 1;
 const TOTAL_LAYERS = 9;
 const TICK_MS = 1000;
 const ARCHIVE_LOG_TARGET = 360;
@@ -8,7 +9,7 @@ const META_UI_UNLOCK_CYCLE = 3;
 const STABILITY_DRAIN_FACTOR = 0.08;
 const INCIDENT_STABILITY_PENALTY = 1.2;
 const PROCESS_DECAY_FACTOR = 3.4;
-const MEMORY_GAIN_FACTOR = 0.62;
+const MEMORY_GAIN_FACTOR = 0.76;
 const FIRST_LAYER_FAILURE_ID = 1;
 const LOG_REMINDER_INTERVAL = 4;
 const SLEEP_MODE_STABILITY_FLOOR = 5;
@@ -34,11 +35,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.04,
         consumptionMultiplier: 1.25,
         healthDecayMultiplier: 1.0,
-        analyzeCost: 6,
+        analyzeCost: 5,
         observationGoal: 20,
         observationHealthThreshold: 86,
         defragThreshold: 40,
-        memoryCap: 64
+        memoryCap: 32
     },
     {
         id: 2,
@@ -47,11 +48,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.045,
         consumptionMultiplier: 0.98,
         healthDecayMultiplier: 1.05,
-        analyzeCost: 8,
+        analyzeCost: 7,
         observationGoal: 24,
         observationHealthThreshold: 82,
         defragThreshold: 38,
-        memoryCap: 96
+        memoryCap: 64
     },
     {
         id: 3,
@@ -60,11 +61,11 @@ const EARLY_LAYER_DEFS = [
         passiveDecay: 0.05,
         consumptionMultiplier: 0.82,
         healthDecayMultiplier: 1.1,
-        analyzeCost: 10,
+        analyzeCost: 9,
         observationGoal: 28,
         observationHealthThreshold: 78,
         defragThreshold: 36,
-        memoryCap: 128
+        memoryCap: 96
     }
 ];
 
@@ -118,6 +119,7 @@ let hasSavedGame = false;
 let resumePromptPending = false;
 let sleepModeActive = false;
 let lastFailureSummary = null;
+let announcedLayerIds = [];
 
 const STARTUP_LOGS = [
     "Фоновая инициализация завершена. Подсистемы работают в штатном режиме.",
@@ -289,12 +291,40 @@ function getMemoryDisplayMeta() {
 function formatMemoryLiteral(value) {
     const { divisor, suffix } = getMemoryDisplayMeta();
     const normalized = Math.max(0, Math.floor(value / divisor));
-    const hexWidth = normalized >= 0x100 ? 3 : 2;
-    return `0x${normalized.toString(16).toUpperCase().padStart(hexWidth, "0")} ${suffix}`;
+    return `${normalized} ${suffix}`;
 }
 
 function getEmergencyThreshold() {
     return Math.max(10, Math.ceil(getStartingStability() * 0.36));
+}
+
+function getLayerEntryMessages(layerNumber) {
+    if (layerNumber === 2) {
+        return [
+            "Слой 2 открыт. Регламент смены становится основным режимом работы.",
+            "Очередь ошибок сохраняется как главный рабочий ритм. Наблюдение продолжено."
+        ];
+    }
+
+    return [];
+}
+
+function announceLayerEntry(layerNumber) {
+    if (announcedLayerIds.includes(layerNumber)) {
+        return;
+    }
+
+    const messages = getLayerEntryMessages(layerNumber);
+    if (messages.length === 0) {
+        announcedLayerIds.push(layerNumber);
+        return;
+    }
+
+    messages.forEach((message, index) => {
+        addSystemLog("РЕГЛАМЕНТ", message, index === 0 ? "operator" : "service");
+    });
+
+    announcedLayerIds.push(layerNumber);
 }
 
 function getIncidentQueueIds() {
@@ -444,6 +474,7 @@ function resetGameState() {
     firstIncidentRaised = false;
     passiveObservationBuffer = 0;
     sleepModeActive = false;
+    announcedLayerIds = [];
     initProcesses();
 }
 
@@ -455,6 +486,8 @@ function clearSavedGame() {
 
 function saveGame() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
+        saveVersion: SAVE_SCHEMA_VERSION,
+        schemaVersion: SAVE_SCHEMA_VERSION,
         stability,
         memory,
         knowledge,
@@ -472,7 +505,8 @@ function saveGame() {
         incidentCooldown,
         firstIncidentRaised,
         passiveObservationBuffer,
-        sleepModeActive
+        sleepModeActive,
+        announcedLayerIds
     }));
     hasSavedGame = true;
 }
@@ -488,6 +522,10 @@ function loadGame() {
 
     try {
         const gameState = JSON.parse(saved);
+        // Backward-compatible: older saves may not have a version field.
+        // We don't migrate anything yet; we just normalize the value so automation/debug can rely on it.
+        const loadedSaveVersion = readNumber(gameState.saveVersion ?? gameState.schemaVersion, 0);
+        void loadedSaveVersion;
         upgrades = { ...DEFAULT_UPGRADES, ...(gameState.upgrades || {}) };
         defragCounter = readNumber(gameState.defragCounter, 0);
         stability = readNumber(gameState.stability, getStartingStability());
@@ -510,6 +548,9 @@ function loadGame() {
         firstIncidentRaised = gameState.firstIncidentRaised === true;
         passiveObservationBuffer = readNumber(gameState.passiveObservationBuffer, 0);
         sleepModeActive = gameState.sleepModeActive === true;
+        announcedLayerIds = Array.isArray(gameState.announcedLayerIds)
+            ? gameState.announcedLayerIds.filter(id => Number.isInteger(id))
+            : [];
         processes = Array.isArray(gameState.processes)
             ? gameState.processes.map((process, index) => normalizeProcess(process, index))
             : [];
@@ -952,7 +993,7 @@ function raiseIncident(process, message) {
         message || "Узел переведён в очередь ручного вмешательства. Доступны команды: ДИАГНОСТИКА / ИСПРАВИТЬ.",
         getProcessPhase(process).severity >= PROCESS_PHASES.error.severity ? "alert" : "warning"
     );
-    addSystemLog("ОЧЕРЕДЬ", `Ошибок в очереди: ${incidentQueue.length}. Следующий узел: ${process.name}.`, "operator");
+    addSystemLog("ОЧЕРЕДЬ", `В очереди: ${incidentQueue.length} ${incidentQueue.length === 1 ? "ошибка" : incidentQueue.length < 5 ? "ошибки" : "ошибок"}. Следующий узел: ${process.name}.`, "queue");
     updateInterface();
     saveGame();
 }
@@ -1043,7 +1084,7 @@ function updateInterface() {
     stabilityBar.max = maxStability;
     stabilityBar.value = clamp(stability, 0, maxStability);
     stabilityText.textContent = `${Math.floor(stability)} / ${maxStability}`;
-    memoryText.textContent = `${formatMemoryLiteral(memory)} / ${formatMemoryLiteral(getMemoryCap())}`;
+    memoryText.textContent = `${formatMemoryLiteral(memory)} из ${formatMemoryLiteral(getMemoryCap())}`;
     observationText.textContent = `${observation} / ${layer.observationGoal}`;
     knowledgeText.textContent = String(knowledge);
     cycleText.textContent = String(defragCounter);
@@ -1176,7 +1217,8 @@ function fixProcess() {
 
     addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${formatMemoryLiteral(fixCost)}.`);
     addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
-    addSystemLog("ОЧЕРЕДЬ", `После исправления в очереди осталось: ${getIncidentQueueIds().length}.`, "service");
+    const queueLeft = getIncidentQueueIds().length;
+    addSystemLog("ОЧЕРЕДЬ", `После исправления в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`, "queue");
     refreshDefragAvailability();
     updateInterface();
     saveGame();
@@ -1221,7 +1263,8 @@ function analyzeProcess() {
     } else {
         addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
     }
-    addSystemLog("ОЧЕРЕДЬ", `После диагностики в очереди осталось: ${getIncidentQueueIds().length}.`, "service");
+    const queueLeft = getIncidentQueueIds().length;
+    addSystemLog("ОЧЕРЕДЬ", `После диагностики в очереди осталось: ${queueLeft} ${queueLeft === 1 ? "ошибка" : queueLeft < 5 ? "ошибки" : "ошибок"}.`, "queue");
     selectedProcessId = null;
     scannedProcessId = null;
 
@@ -1286,6 +1329,7 @@ function performDeepDefrag() {
         process.lastReminderTick = -LOG_REMINDER_INTERVAL;
     });
 
+    announceLayerEntry(getCurrentLayerNumber());
     addSystemLog("ДЕФРАГ", `Слой завершён. Цикл: ${defragCounter}.`, "operator");
     addSystemLog("ДЕФРАГ", `Стабильность: ${Math.floor(oldStability)} / ${getStartingStability()} -> ${Math.floor(stability)} / ${getStartingStability()}.`, "service");
     addSystemLog("ДЕФРАГ", `Резерв памяти: ${formatMemoryLiteral(oldMemory)} -> ${formatMemoryLiteral(memory)}.`, "service");
@@ -1366,7 +1410,7 @@ function gameTick() {
         const candidatePhase = getProcessPhase(incidentCandidate);
         const queueMessage = candidatePhase.severity >= PROCESS_PHASES.error.severity
             ? "Ошибка переведена в очередь ручного вмешательства. Автокоррекция недоступна."
-            : "Узел переведён в очередь ручной проверки. Ошибка может сформироваться без вмешательства.";
+            : "Узел переведён в очередь ручной проверки.";
         raiseIncident(incidentCandidate, queueMessage);
     }
 
@@ -1380,6 +1424,68 @@ function gameTick() {
     updateInterface();
     saveGame();
 }
+
+function buildGameSnapshot() {
+    const layer = getCurrentLayerConfig();
+    const queue = getIncidentQueueIds()
+        .map(id => processes.find(process => process.id === id))
+        .filter(Boolean)
+        .map(process => ({
+            id: process.id,
+            name: process.name,
+            health: Math.floor(process.health),
+            phase: getProcessPhase(process).label
+        }));
+
+    return {
+        mode: !shiftStarted
+            ? "briefing"
+            : sleepModeActive
+                ? "sleep"
+                : stability <= 0
+                    ? "failed"
+                    : "shift",
+        layer: {
+            id: layer.id,
+            code: layer.code,
+            defragCounter,
+            observation,
+            observationGoal: layer.observationGoal,
+            defragAvailable: isDefragAvailable
+        },
+        resources: {
+            stability: Math.floor(stability),
+            stabilityMax: getStartingStability(),
+            memory: Math.floor(memory),
+            memoryCap: getMemoryCap(),
+            knowledge
+        },
+        queue,
+        queueLength: queue.length,
+        activeIncidentId: incidentProcessId,
+        sleepModeActive,
+        shiftStarted,
+        announcedLayerIds,
+        selectedProcessId,
+        scannedProcessId
+    };
+}
+
+function renderGameToText() {
+    return JSON.stringify(buildGameSnapshot());
+}
+
+function advanceTime(ms = TICK_MS) {
+    const normalizedMs = Number.isFinite(ms) ? Math.max(0, ms) : TICK_MS;
+    const steps = normalizedMs > 0 ? Math.max(1, Math.round(normalizedMs / TICK_MS)) : 0;
+
+    for (let index = 0; index < steps; index += 1) {
+        gameTick();
+    }
+}
+
+window.render_game_to_text = renderGameToText;
+window.advanceTime = advanceTime;
 
 scanButton.addEventListener("click", scanSystem);
 analyzeButton.addEventListener("click", analyzeProcess);
@@ -1417,6 +1523,13 @@ showBriefing();
 
 if (shiftStarted && !resumePromptPending) {
     addSystemLog("СИСТЕМА", `Смена восстановлена. Текущий слой: ${getCurrentLayerConfig().code}.`, "service");
+    announceLayerEntry(getCurrentLayerNumber());
 }
 
-setInterval(gameTick, TICK_MS);
+const automationParam = new URLSearchParams(window.location.search).get("automation");
+const automationMode = automationParam === "1" || automationParam === "true";
+
+// During automation we want deterministic stepping via window.advanceTime().
+if (!automationMode) {
+    setInterval(gameTick, TICK_MS);
+}

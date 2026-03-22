@@ -286,6 +286,13 @@ progress {
     border-bottom-color: rgba(142, 180, 124, 0.3);
 }
 
+.log-entry-queue {
+    color: #9cc9bf;
+    border-bottom-color: rgba(124, 177, 165, 0.36);
+    text-shadow: 0 0 6px rgba(112, 171, 157, 0.12);
+    letter-spacing: 0.03em;
+}
+
 .log-entry-warning {
     color: #dcc38d;
     border-bottom-color: rgba(190, 164, 111, 0.42);

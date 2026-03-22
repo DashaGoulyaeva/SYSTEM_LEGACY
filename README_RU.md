@@ -54,6 +54,8 @@
 
 ## Документация
 
+- Агентная система разработки: [AGENTS.md](./AGENTS.md)
+- Процессные доки: [docs/README.md](./docs/README.md)
 - Дневник разработки: [DEVLOG_RU.md](./DEVLOG_RU.md)
 - Английский readme: [README.md](./README.md)
 - Английский devlog: [DEVLOG.md](./DEVLOG.md)

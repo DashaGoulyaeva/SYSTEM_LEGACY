@@ -54,6 +54,8 @@ Right now the main goal is to make the first layer work as an actual game loop:
 
 ## Documentation
 
+- Agent system: [AGENTS.md](./AGENTS.md)
+- Process docs: [docs/README.md](./docs/README.md)
 - Development log: [DEVLOG.md](./DEVLOG.md)
 - Russian readme: [README_RU.md](./README_RU.md)
 - Russian devlog: [DEVLOG_RU.md](./DEVLOG_RU.md)

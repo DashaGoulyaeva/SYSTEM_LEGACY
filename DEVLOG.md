@@ -86,3 +86,12 @@ The prototype now starts as a live terminal shift instead of a blank local page.
 2. Sharpen the difference between analysis and repair so they read as distinct actions.
 3. Continue reducing ambiguity between status, currency, and layer progress in the interface.
 4. Keep the first layer dry and technical until later narrative signals are earned.
+
+## 2026-03-22 — Agent Development Infrastructure
+
+### Status
+Added a role-based agent workflow scaffold to keep implementation, review, docs, and internal memory separate.
+
+### Repo Changes
+1. Added [AGENTS.md](./AGENTS.md) as the source of truth for roles and process rules.
+2. Added lightweight process docs and reusable materials under `docs/`, `prompts/`, `templates/`, and `checklists/`.

@@ -618,7 +618,7 @@ progress::-moz-progress-bar {
 }
 
 .briefing-overlay {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 100;
     display: none;
@@ -639,6 +639,13 @@ progress::-moz-progress-bar {
 
 .briefing-overlay.is-visible {
     display: flex;
+}
+
+/* Screen mode behavior: when briefing/failure overlay is visible, treat the device as a single screen mode. */
+.briefing-overlay.is-visible ~ .terminal {
+    opacity: 0.16;
+    filter: blur(0.6px) contrast(0.92) saturate(0.9);
+    pointer-events: none;
 }
 
 .briefing-card {

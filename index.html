@@ -4,49 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SYSTEM_LEGACY — Терминал смены</title>
-    <link rel="stylesheet" href="style.css?v=11">
+    <link rel="stylesheet" href="style.css?v=12">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="briefing-overlay" id="briefing-overlay">
-        <section class="briefing-card">
-            <h1 id="briefing-title">ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ</h1>
-            <div id="briefing-grid" class="briefing-grid">
-                <article class="briefing-block">
-                    <h2>ПОРЯДОК РАБОТЫ</h2>
-                    <ul>
-                        <li>В начале смены контролировать системный журнал.</li>
-                        <li>При появлении срочной ошибки открыть аварийный узел.</li>
-                        <li>После открытия узла выполнить диагностику или исправление ошибки.</li>
-                        <li>Глубокую дефрагментацию выполнять только после получения допуска.</li>
-                    </ul>
-                </article>
-                <article class="briefing-block">
-                    <h2>КОНТРОЛЬНЫЕ ПОКАЗАТЕЛИ</h2>
-                    <ul>
-                        <li><strong>Стабильность</strong> отражает текущее состояние системы.</li>
-                        <li><strong>Память</strong> используется при выполнении ручных операций.</li>
-                        <li><strong>Разбор ошибок</strong> определяет готовность контура к глубокой дефрагментации.</li>
-                        <li>Назначение отдельных контуров не раскрывается. В системе сохраняются остаточные модули управления объектами повышенной опасности.</li>
-                        <li>При неопределённости ориентироваться по системному журналу.</li>
-                    </ul>
-                </article>
-            </div>
-            <div id="briefing-result" class="briefing-result is-hidden">
-                <p id="briefing-result-lead" class="briefing-result-lead"></p>
-                <div id="briefing-result-stats" class="briefing-result-stats"></div>
-            </div>
-            <div class="briefing-actions">
-                <button id="new-game-btn" class="ghost-btn is-hidden">Начать новую смену</button>
-                <button id="share-result-btn" class="ghost-btn is-hidden">Поделиться результатом</button>
-                <button id="start-shift-btn" class="primary-btn">Сесть за терминал</button>
-            </div>
-        </section>
-    </div>
-
     <div class="app-shell">
         <div class="machine-shell">
             <div class="crt-screen">
+                <div class="briefing-overlay" id="briefing-overlay">
+                    <section class="briefing-card">
+                        <h1 id="briefing-title">ИНСТРУКЦИЯ ОПЕРАТОРА ДЕЖУРНОЙ СМЕНЫ</h1>
+                        <div id="briefing-grid" class="briefing-grid">
+                            <article class="briefing-block">
+                                <h2>ПОРЯДОК РАБОТЫ</h2>
+                                <ul>
+                                    <li>В начале смены контролировать системный журнал.</li>
+                                    <li>При появлении срочной ошибки открыть аварийный узел.</li>
+                                    <li>После открытия узла выполнить диагностику или исправление ошибки.</li>
+                                    <li>Глубокую дефрагментацию выполнять только после получения допуска.</li>
+                                </ul>
+                            </article>
+                            <article class="briefing-block">
+                                <h2>КОНТРОЛЬНЫЕ ПОКАЗАТЕЛИ</h2>
+                                <ul>
+                                    <li><strong>Стабильность</strong> отражает текущее состояние системы.</li>
+                                    <li><strong>Память</strong> используется при выполнении ручных операций.</li>
+                                    <li><strong>Разбор ошибок</strong> определяет готовность контура к глубокой дефрагментации.</li>
+                                    <li>Назначение отдельных контуров не раскрывается. В системе сохраняются остаточные модули управления объектами повышенной опасности.</li>
+                                    <li>При неопределённости ориентироваться по системному журналу.</li>
+                                </ul>
+                            </article>
+                        </div>
+                        <div id="briefing-result" class="briefing-result is-hidden">
+                            <p id="briefing-result-lead" class="briefing-result-lead"></p>
+                            <div id="briefing-result-stats" class="briefing-result-stats"></div>
+                        </div>
+                        <div class="briefing-actions">
+                            <button id="new-game-btn" class="ghost-btn is-hidden">Начать новую смену</button>
+                            <button id="share-result-btn" class="ghost-btn is-hidden">Поделиться результатом</button>
+                            <button id="start-shift-btn" class="primary-btn">Сесть за терминал</button>
+                        </div>
+                    </section>
+                </div>
                 <div class="terminal">
             <header class="terminal-header">
                 <div class="header-main">

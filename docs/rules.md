@@ -12,6 +12,7 @@
 - Internal reasoning and archive-only notes may be in English.
 - Do not translate unless it is explicitly needed.
 - Obsidian notes may be auto-normalized by a separate beautification automation; do not treat added tags, links, or formatting as a conflict by default.
+- Keep terminology consistent in player-facing text: do not mix `ошибка` and `сбой` for the same user-visible concept.
 
 ## Skill Use
 

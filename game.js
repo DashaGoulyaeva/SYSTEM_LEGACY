@@ -809,7 +809,7 @@ function renderBriefingOverlay() {
 
         const lines = [
             `Контур: ${summary.layerCode}`,
-            `Разобрано сбоев: ${summary.observation}`,
+            `Разобрано ошибок: ${summary.observation}`,
             `Накоплено знания: ${summary.knowledge}`,
             `Циклы: ${summary.cycles}`,
             `Длина смены: ${summary.shiftTick} тиков`
@@ -860,7 +860,7 @@ function buildFailureShareText() {
         "SYSTEM_LEGACY — смена прекращена",
         "Вы не справились и уволены.",
         `Контур: ${lastFailureSummary.layerCode}`,
-        `Разобрано сбоев: ${lastFailureSummary.observation}`,
+        `Разобрано ошибок: ${lastFailureSummary.observation}`,
         `Знание: ${lastFailureSummary.knowledge}`,
         `Циклы: ${lastFailureSummary.cycles}`,
         `Длина смены: ${lastFailureSummary.shiftTick} тиков`
@@ -1128,7 +1128,7 @@ function updateInterface() {
         ? "Выдан допуск к глубокой дефрагментации."
         : observation >= layer.observationGoal
             ? `Разбор завершён. Для допуска нужно удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`
-            : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} сбоев и удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`;
+            : `До допуска к глубокой дефрагментации нужно разобрать ${layer.observationGoal} ошибок и удерживать стабильность не ниже ${layer.defragThreshold} / ${maxStability}.`;
 
     scanButton.disabled = true;
     analyzeButton.disabled = !shiftStarted;
@@ -1216,7 +1216,7 @@ function fixProcess() {
     process.phaseId = getProcessPhaseByHealth(process.health, process.isBroken).id;
 
     addOperatorLog(`Запущено исправление узла ${process.name}. Расход резерва: ${formatMemoryLiteral(fixCost)}.`);
-    addSystemLog(process.name, `Сбой исправлен. Устойчивость контура +${stabilityRestore}.`, "operator");
+    addSystemLog(process.name, `Ошибка исправлена. Устойчивость контура +${stabilityRestore}.`, "operator");
     const queueLeft = getIncidentQueueIds().length;
     addSystemLog(
         "ОЧЕРЕДЬ",
@@ -1267,7 +1267,7 @@ function analyzeProcess() {
     if (alreadyObserved) {
         addSystemLog(process.name, "Повторный разбор завершён. Новый прогресс не получен.", "service");
     } else {
-        addSystemLog(process.name, `Сбой разобран (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
+        addSystemLog(process.name, `Ошибка разобрана (${observation}/${layer.observationGoal}). Узел переведён в режим наблюдения.`, "operator");
     }
     const queueLeft = getIncidentQueueIds().length;
     addSystemLog(
@@ -1300,7 +1300,7 @@ function performDeepDefrag() {
 
     const confirmed = confirm(
         `ГЛУБОКАЯ ДЕФРАГМЕНТАЦИЯ · СЛОЙ ${layer.id} / ${TOTAL_LAYERS}\n\n` +
-        `Разобрано сбоев: ${observation}/${layer.observationGoal}\n` +
+        `Разобрано ошибок: ${observation}/${layer.observationGoal}\n` +
         `Стабильность: ${Math.floor(stability)} / ${getStartingStability()}\n\n` +
         `Резерв памяти и состояние процессов будут сброшены, но знание сохранится.\n` +
         `Продолжить?`

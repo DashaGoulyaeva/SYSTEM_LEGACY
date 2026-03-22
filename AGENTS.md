@@ -46,6 +46,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 - Do not duplicate the same explanation in both places unless the public version is intentionally shorter.
 - When in doubt, keep the richer version internal and publish only the outcome.
 - A separate Obsidian beautification automation may add tags, links, and formatting to vault notes; treat that as expected normalization, not as a conflict, and record what changed if it matters.
+- Keep player-facing terminology consistent across logs and UI: if the queue says `ошибка`, the interface summary should also say `ошибка`, not `сбой`, for the same concept.
 
 ## Language Policy
 

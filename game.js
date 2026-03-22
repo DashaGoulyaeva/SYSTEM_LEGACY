@@ -1294,7 +1294,7 @@ function performDeepDefrag() {
     }
 
     if (observation < layer.observationGoal) {
-        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужно разобрать ${layer.observationGoal} сбоев, разобрано ${observation}.`, "warning");
+        addSystemLog("ДОПУСК", `Завершение слоя пока недоступно. Нужно разобрать ${layer.observationGoal} ошибок, разобрано ${observation}.`, "warning");
         return;
     }
 

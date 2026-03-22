@@ -1,21 +1,33 @@
 :root {
     color-scheme: dark;
-    --bg: #040504;
-    --panel: rgba(7, 9, 7, 0.97);
-    --panel-soft: rgba(10, 13, 10, 0.98);
-    --line: #263026;
-    --line-strong: #5c7052;
-    --text: #c4cfc0;
-    --muted: #7e8979;
-    --green: #8eb47c;
-    --green-strong: #bad1a9;
-    --danger: #c97d7d;
-    --warning: #bea46f;
-    --queue: #9cc9bf;
-    --queue-bg: rgba(14, 30, 30, 0.35);
-    --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-    --glass-glow: rgba(186, 209, 169, 0.08);
-    --glass-dust: rgba(217, 202, 160, 0.06);
+
+    /* Physical shell */
+    --desk: #0b0c0b;
+    --shell-0: #d8d6cf;
+    --shell-1: #bfbdb5;
+    --shell-2: #9e9c95;
+    --shell-edge: #6f6e68;
+    --shell-shadow: rgba(0, 0, 0, 0.6);
+
+    /* CRT glass + phosphor */
+    --glass: #040805;
+    --glass-deep: #010302;
+    --phosphor: rgba(155, 255, 138, 0.92);
+    --phosphor-dim: rgba(155, 255, 138, 0.62);
+    --amber: rgba(255, 207, 122, 0.9);
+    --red: rgba(255, 140, 122, 0.92);
+
+    /* Screen lines */
+    --line: rgba(155, 255, 138, 0.16);
+    --line-strong: rgba(155, 255, 138, 0.3);
+    --text: var(--phosphor);
+    --muted: var(--phosphor-dim);
+
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+
+    /* Compatibility with older styles that used "green" naming. */
+    --green: rgba(155, 255, 138, 0.78);
+    --green-strong: var(--phosphor);
 }
 
 * {
@@ -28,9 +40,10 @@ body {
     min-height: 100vh;
     overflow: hidden;
     background:
-        radial-gradient(circle at 50% -10%, rgba(104, 117, 83, 0.2), transparent 28%),
-        radial-gradient(circle at 18% 8%, rgba(138, 112, 72, 0.08), transparent 22%),
-        linear-gradient(180deg, #020302 0%, #060806 55%, #030403 100%);
+        radial-gradient(circle at 50% 10%, rgba(255, 248, 220, 0.05), transparent 42%),
+        radial-gradient(circle at 20% 0%, rgba(255, 214, 164, 0.035), transparent 40%),
+        radial-gradient(circle at 72% 12%, rgba(206, 226, 188, 0.03), transparent 44%),
+        linear-gradient(180deg, #060707 0%, #050705 40%, #070807 100%);
     color: var(--text);
     font-family: "JetBrains Mono", monospace;
     line-height: 1.4;
@@ -42,99 +55,159 @@ progress {
 }
 
 .app-shell {
-    padding: 18px 28px;
-    height: 100vh;
+    min-height: 100vh;
+    padding: 32px 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.machine-shell {
+    position: relative;
+    width: min(1320px, calc(100vw - 52px));
+    height: min(920px, calc(100vh - 84px));
+    padding: 34px 34px 42px;
+    border-radius: 26px 26px 44px 44px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.38), transparent 42%),
+        radial-gradient(ellipse at 35% 18%, rgba(255, 255, 255, 0.16), transparent 44%),
+        radial-gradient(circle at 82% 65%, rgba(0, 0, 0, 0.12), transparent 58%),
+        linear-gradient(180deg, var(--shell-0), var(--shell-1));
+    border: 2px solid rgba(60, 60, 58, 0.55);
+    box-shadow:
+        0 48px 90px rgba(0, 0, 0, 0.6),
+        0 14px 30px rgba(0, 0, 0, 0.35),
+        inset 0 2px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.22);
+}
+
+.machine-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.02) 0,
+            rgba(0, 0, 0, 0.02) 1px,
+            transparent 1px,
+            transparent 7px
+        );
+    opacity: 0.35;
+    mix-blend-mode: multiply;
+}
+
+.machine-shell::after {
+    content: "";
+    position: absolute;
+    inset: 10px 10px auto auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    pointer-events: none;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.32), rgba(0, 0, 0, 0.55) 62%, rgba(0, 0, 0, 0.86) 100%);
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.34),
+        0 2px 4px rgba(0, 0, 0, 0.4);
+    opacity: 0.7;
+}
+
+.crt-screen {
+    position: relative;
+    height: 100%;
+    padding: 12px;
+    border-radius: 20px;
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(155, 255, 138, 0.06), transparent 62%),
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.045), transparent 48%),
+        linear-gradient(180deg, var(--glass), var(--glass-deep));
+    border: 2px solid rgba(0, 0, 0, 0.72);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        inset 0 0 80px rgba(0, 0, 0, 0.78),
+        inset 0 0 220px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+    filter: contrast(1.08) saturate(1.05);
+    animation: crtFlicker 8s steps(2, end) infinite;
+}
+
+.crt-screen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.18;
+    background:
+        repeating-linear-gradient(
+            180deg,
+            rgba(0, 0, 0, 0.38) 0,
+            rgba(0, 0, 0, 0.38) 1px,
+            rgba(255, 255, 255, 0.012) 2px,
+            transparent 3px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.012) 0,
+            rgba(255, 255, 255, 0.012) 1px,
+            transparent 2px,
+            transparent 6px
+        );
+    mix-blend-mode: overlay;
+}
+
+.crt-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 50% 50%, transparent 0 52%, rgba(0, 0, 0, 0.42) 82%, rgba(0, 0, 0, 0.76) 100%),
+        radial-gradient(ellipse at 55% 10%, rgba(255, 255, 255, 0.08), transparent 52%),
+        radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.04) 0 1px, transparent 2px),
+        radial-gradient(circle at 68% 66%, rgba(255, 255, 255, 0.03) 0 1px, transparent 2px),
+        linear-gradient(115deg, rgba(255, 255, 255, 0.04) 0%, transparent 34%, transparent 72%, rgba(0, 0, 0, 0.18) 100%);
+    opacity: 0.55;
+    mix-blend-mode: screen;
+}
+
+@keyframes crtFlicker {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.965;
+    }
 }
 
 .terminal {
     position: relative;
-    width: min(1480px, calc(100vw - 72px));
-    height: calc(100vh - 36px);
-    margin: 0 auto;
-    padding: 12px;
-    border: 1px solid var(--line-strong);
-    border-radius: 18px 18px 26px 26px;
-    box-shadow:
-        0 28px 60px rgba(0, 0, 0, 0.42),
-        0 6px 20px rgba(0, 0, 0, 0.28),
-        inset 0 0 0 1px rgba(120, 140, 112, 0.08),
-        inset 0 18px 28px rgba(255, 248, 220, 0.018);
-    background:
-        radial-gradient(ellipse at 50% 44%, rgba(164, 191, 146, 0.055), transparent 0 58%, rgba(0, 0, 0, 0.18) 86%, rgba(0, 0, 0, 0.46) 100%),
-        radial-gradient(circle at 18% 22%, rgba(155, 179, 138, 0.08), transparent 0 11px, rgba(155, 179, 138, 0.03) 12px, transparent 13px),
-        radial-gradient(circle at 76% 35%, rgba(155, 179, 138, 0.07), transparent 0 9px, rgba(155, 179, 138, 0.02) 10px, transparent 11px),
-        radial-gradient(circle at 63% 77%, rgba(155, 179, 138, 0.06), transparent 0 8px, rgba(155, 179, 138, 0.015) 9px, transparent 10px),
-        radial-gradient(circle at 27% 64%, rgba(255, 226, 154, 0.045), transparent 0 6px, rgba(255, 226, 154, 0.02) 7px, transparent 8px),
-        repeating-linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.024) 0,
-            rgba(255, 255, 255, 0.024) 1px,
-            transparent 1px,
-            transparent 3px
-        ),
-        linear-gradient(180deg, rgba(9, 11, 9, 0.99), rgba(5, 7, 5, 0.99));
+    height: 100%;
+    padding: 10px;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
-    gap: 8px;
+    gap: 0;
     overflow: hidden;
 }
 
-.terminal::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.58;
-    background:
-        radial-gradient(ellipse at 50% 18%, rgba(255, 255, 255, 0.055), transparent 0 34%, rgba(255, 255, 255, 0.012) 46%, transparent 58%),
-        radial-gradient(ellipse at 50% 50%, var(--glass-glow) 0, transparent 60%),
-        radial-gradient(circle at 14% 20%, var(--glass-dust) 0 1px, transparent 2px),
-        radial-gradient(circle at 29% 72%, rgba(255, 232, 184, 0.045) 0 1px, transparent 2px),
-        radial-gradient(circle at 71% 28%, rgba(255, 232, 184, 0.04) 0 1px, transparent 2px),
-        radial-gradient(circle at 83% 64%, rgba(255, 232, 184, 0.032) 0 1px, transparent 2px),
-        radial-gradient(circle at 8% 12%, rgba(255, 255, 255, 0.06) 0 1px, transparent 2px),
-        radial-gradient(circle at 32% 68%, rgba(255, 255, 255, 0.05) 0 1px, transparent 2px),
-        radial-gradient(circle at 84% 21%, rgba(255, 255, 255, 0.055) 0 1px, transparent 2px),
-        radial-gradient(circle at 61% 82%, rgba(0, 0, 0, 0.22) 0 2px, transparent 3px),
-        linear-gradient(90deg, transparent 0, rgba(188, 208, 176, 0.03) 48%, transparent 100%),
-        repeating-linear-gradient(
-            180deg,
-            transparent 0,
-            transparent 2px,
-            rgba(0, 0, 0, 0.18) 3px,
-            transparent 4px
-        );
-    mix-blend-mode: screen;
-}
-
+.terminal::before,
 .terminal::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    border-radius: inherit;
-    box-shadow:
-        inset 0 0 56px rgba(0, 0, 0, 0.58),
-        inset 0 0 160px rgba(0, 0, 0, 0.34),
-        inset 0 -26px 54px rgba(124, 80, 50, 0.085),
-        inset 0 14px 24px rgba(255, 252, 233, 0.028),
-        inset 14px 0 24px rgba(255, 252, 233, 0.012),
-        inset -14px 0 24px rgba(255, 252, 233, 0.012);
+    display: none;
 }
 
 .terminal-header,
 .log-panel,
 .summary-panel,
 .command-panel,
-.upgrades-panel,
-.briefing-card,
-.briefing-block {
+.upgrades-panel {
     position: relative;
     z-index: 1;
-    background: linear-gradient(180deg, rgba(10, 13, 10, 0.95), rgba(7, 9, 7, 0.95));
-    border: 1px solid rgba(92, 112, 82, 0.72);
-    border-radius: 10px;
-    box-shadow: inset 0 1px 0 rgba(255, 248, 220, 0.025);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .terminal-header {
@@ -142,7 +215,8 @@ progress {
     justify-content: space-between;
     gap: 16px;
     align-items: flex-start;
-    padding: 8px 10px;
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid var(--line-strong);
 }
 
 .eyebrow,
@@ -158,10 +232,12 @@ progress {
 
 .header-main h1 {
     margin-top: 5px;
-    color: var(--green-strong);
+    color: var(--phosphor);
     font-size: clamp(1.02rem, 1.4vw, 1.3rem);
     font-weight: 700;
-    text-shadow: 0 0 6px rgba(171, 194, 156, 0.12);
+    text-shadow:
+        0 0 10px rgba(155, 255, 138, 0.18),
+        0 0 22px rgba(155, 255, 138, 0.08);
 }
 
 .header-right {
@@ -184,19 +260,24 @@ progress {
     min-height: 40px;
     padding: 4px 12px;
     border: 1px solid var(--line-strong);
-    background: rgba(17, 22, 17, 0.96);
-    color: var(--green-strong);
+    background: rgba(0, 0, 0, 0.18);
+    color: var(--phosphor);
+    text-shadow: 0 0 10px rgba(155, 255, 138, 0.14);
 }
 
 .ghost-btn,
 .primary-btn,
 .cmd-btn {
     border: 1px solid var(--line-strong);
-    border-radius: 2px;
-    background: rgba(15, 20, 15, 0.98);
-    color: var(--green-strong);
+    border-radius: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.12));
+    color: var(--phosphor);
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.55);
 }
 
 .ghost-btn,
@@ -208,28 +289,31 @@ progress {
 .ghost-btn:hover,
 .primary-btn:hover,
 .cmd-btn:hover:not(:disabled) {
-    background: rgba(24, 31, 24, 0.98);
-    border-color: var(--green);
+    background:
+        linear-gradient(180deg, rgba(155, 255, 138, 0.14), rgba(0, 0, 0, 0.14));
+    border-color: rgba(155, 255, 138, 0.55);
 }
 
 .workspace {
     display: grid;
     grid-template-columns: minmax(0, 1.78fr) minmax(300px, 0.78fr);
-    gap: 8px;
+    gap: 0;
     min-height: 0;
+    border-bottom: 1px solid var(--line-strong);
 }
 
 .log-panel,
 .summary-panel,
 .command-panel,
 .upgrades-panel {
-    padding: 8px 10px;
+    padding: 10px;
 }
 
 .log-panel {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    border-right: 1px solid var(--line);
 }
 
 .panel-head {
@@ -239,7 +323,8 @@ progress {
 .panel-head h2 {
     margin-top: 3px;
     font-size: 0.92rem;
-    color: var(--green-strong);
+    color: var(--phosphor);
+    text-shadow: 0 0 12px rgba(155, 255, 138, 0.12);
 }
 
 .log-content {
@@ -252,13 +337,15 @@ progress {
 }
 
 .log-entry {
-    padding: 8px 4px;
-    border-bottom: 1px dashed rgba(96, 115, 91, 0.22);
-    color: var(--text);
+    padding: 6px 2px;
+    border-bottom: 1px dashed rgba(155, 255, 138, 0.12);
+    color: var(--phosphor);
     font-size: 0.9rem;
     line-height: 1.45;
     white-space: pre-wrap;
-    text-shadow: 0 0 3px rgba(169, 192, 154, 0.08);
+    text-shadow:
+        0 0 12px rgba(155, 255, 138, 0.18),
+        0 0 28px rgba(155, 255, 138, 0.06);
 }
 
 .log-entry:last-child {
@@ -267,7 +354,7 @@ progress {
 
 .log-entry-archive,
 .log-entry-noise {
-    color: rgba(133, 153, 126, 0.72);
+    color: rgba(155, 255, 138, 0.5);
     font-size: 0.74rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -287,49 +374,51 @@ progress {
 }
 
 .log-entry-operator {
-    color: var(--green-strong);
-    border-bottom-color: rgba(142, 180, 124, 0.3);
+    color: rgba(190, 255, 168, 0.96);
+    border-bottom-color: rgba(155, 255, 138, 0.16);
 }
 
 .log-entry-queue {
-    color: var(--queue);
-    border-bottom-color: rgba(124, 177, 165, 0.36);
-    background: var(--queue-bg);
-    border-left: 2px solid rgba(124, 177, 165, 0.55);
-    padding-left: 10px;
-    text-shadow: 0 0 6px rgba(112, 171, 157, 0.12);
+    color: rgba(200, 255, 210, 0.9);
+    border-bottom-color: rgba(155, 255, 138, 0.2);
+    background: transparent;
+    border-left: none;
+    padding-left: 2px;
+    text-shadow: 0 0 14px rgba(155, 255, 138, 0.16);
     letter-spacing: 0.03em;
 }
 
 .log-entry-warning {
-    color: #dcc38d;
-    border-bottom-color: rgba(190, 164, 111, 0.42);
-    background: rgba(30, 24, 10, 0.28);
-    border-left: 2px solid rgba(190, 164, 111, 0.55);
-    padding-left: 10px;
+    color: var(--amber);
+    border-bottom-color: rgba(255, 207, 122, 0.2);
+    background: transparent;
+    border-left: none;
+    padding-left: 2px;
+    text-shadow: 0 0 14px rgba(255, 207, 122, 0.12);
 }
 
 .log-entry-alert {
-    color: #efb0a4;
-    border-bottom-color: rgba(201, 125, 125, 0.45);
-    background: rgba(35, 16, 16, 0.28);
-    border-left: 2px solid rgba(201, 125, 125, 0.55);
-    padding-left: 10px;
+    color: rgba(255, 176, 164, 0.9);
+    border-bottom-color: rgba(255, 176, 164, 0.22);
+    background: transparent;
+    border-left: none;
+    padding-left: 2px;
+    text-shadow: 0 0 14px rgba(255, 176, 164, 0.12);
 }
 
 .log-entry-critical {
-    color: #ffd0d0;
-    border-bottom-color: rgba(201, 125, 125, 0.65);
-    background: rgba(50, 18, 18, 0.34);
-    border-left: 2px solid rgba(255, 160, 160, 0.55);
-    padding-left: 10px;
-    text-shadow: 0 0 8px rgba(201, 125, 125, 0.18);
+    color: rgba(255, 210, 210, 0.92);
+    border-bottom-color: rgba(255, 140, 122, 0.4);
+    background: transparent;
+    border-left: none;
+    padding-left: 2px;
+    text-shadow: 0 0 18px rgba(255, 140, 122, 0.16);
 }
 
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
 }
 
 .metric-group-label {
@@ -338,13 +427,13 @@ progress {
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    border-top: 1px solid rgba(92, 112, 82, 0.38);
+    border-top: 1px solid rgba(155, 255, 138, 0.16);
 }
 
 .metric {
-    padding: 8px;
-    border: 1px solid var(--line);
-    background: rgba(7, 10, 7, 0.96);
+    padding: 8px 6px;
+    border: 1px solid rgba(155, 255, 138, 0.14);
+    background: rgba(0, 0, 0, 0.14);
 }
 
 .metric-wide {
@@ -354,9 +443,10 @@ progress {
 .metric-value {
     display: block;
     margin-top: 5px;
-    color: #f0f3ec;
+    color: rgba(220, 255, 210, 0.95);
     font-size: 1rem;
     font-weight: 700;
+    text-shadow: 0 0 14px rgba(155, 255, 138, 0.12);
 }
 
 .metric-note {
@@ -379,8 +469,8 @@ progress {
     width: 100%;
     height: 12px;
     margin-top: 6px;
-    border: none;
-    background: #1e251e;
+    border: 1px solid rgba(155, 255, 138, 0.18);
+    background: rgba(0, 0, 0, 0.28);
 }
 
 progress::-webkit-progress-bar {
@@ -408,15 +498,15 @@ progress::-moz-progress-bar {
 }
 
 .status-warning {
-    color: #ffd2a6 !important;
-    border-color: rgba(190, 164, 111, 0.88);
-    box-shadow: 0 0 14px rgba(190, 164, 111, 0.22);
+    color: rgba(255, 207, 122, 0.95) !important;
+    border-color: rgba(255, 207, 122, 0.4);
+    box-shadow: 0 0 22px rgba(255, 207, 122, 0.14);
 }
 
 .status-critical {
-    color: #ffd2d2 !important;
-    border-color: rgba(201, 125, 125, 0.95);
-    box-shadow: 0 0 18px rgba(201, 125, 125, 0.26);
+    color: rgba(255, 210, 210, 0.96) !important;
+    border-color: rgba(255, 140, 122, 0.55);
+    box-shadow: 0 0 28px rgba(255, 140, 122, 0.16);
     animation: criticalPulse 1.25s steps(2, end) infinite;
 }
 
@@ -436,13 +526,13 @@ progress::-moz-progress-bar {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    border-top: 1px solid rgba(92, 112, 82, 0.3);
-    padding-top: 6px;
+    border-top: 1px solid var(--line-strong);
+    padding-top: 10px;
 }
 
 .command-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     justify-content: flex-end;
     flex-wrap: wrap;
@@ -450,7 +540,7 @@ progress::-moz-progress-bar {
 
 .cmd-btn {
     min-width: 168px;
-    padding: 10px 14px;
+    padding: 10px 12px;
     font-size: 0.76rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -469,23 +559,26 @@ progress::-moz-progress-bar {
 }
 
 .cmd-btn.danger {
-    color: #ffd8d8;
-    border-color: rgba(154, 88, 88, 0.76);
-    background: rgba(35, 16, 16, 0.98);
+    color: rgba(255, 210, 210, 0.96);
+    border-color: rgba(255, 140, 122, 0.42);
+    background:
+        linear-gradient(180deg, rgba(255, 140, 122, 0.18), rgba(0, 0, 0, 0.2));
 }
 
 #analyze-btn.cmd-btn {
-    background: rgba(18, 30, 18, 0.98);
-    border-color: rgba(142, 180, 124, 0.9);
-    color: #e3f2d7;
-    box-shadow: 0 0 0 1px rgba(142, 180, 124, 0.16);
+    background:
+        linear-gradient(180deg, rgba(155, 255, 138, 0.18), rgba(0, 0, 0, 0.16));
+    border-color: rgba(155, 255, 138, 0.46);
+    color: rgba(220, 255, 210, 0.96);
+    box-shadow: 0 0 0 1px rgba(155, 255, 138, 0.08);
 }
 
 #fix-btn.cmd-btn {
-    background: rgba(30, 24, 10, 0.96);
-    border-color: rgba(190, 164, 111, 0.9);
-    color: #f3e2b6;
-    box-shadow: 0 0 0 1px rgba(190, 164, 111, 0.16);
+    background:
+        linear-gradient(180deg, rgba(255, 207, 122, 0.14), rgba(0, 0, 0, 0.16));
+    border-color: rgba(255, 207, 122, 0.36);
+    color: rgba(255, 235, 198, 0.92);
+    box-shadow: 0 0 0 1px rgba(255, 207, 122, 0.08);
 }
 
 .upgrades-panel {
@@ -500,8 +593,8 @@ progress::-moz-progress-bar {
 
 .upgrade-card {
     padding: 7px;
-    border: 1px solid var(--line);
-    background: rgba(7, 10, 7, 0.96);
+    border: 1px dotted rgba(155, 255, 138, 0.2);
+    background: transparent;
 }
 
 .upgrade-card h4 {
@@ -532,8 +625,16 @@ progress::-moz-progress-bar {
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(3, 5, 3, 0.88);
-    backdrop-filter: blur(4px);
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04), transparent 44%),
+        radial-gradient(circle at 50% 60%, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.92) 70%),
+        repeating-linear-gradient(
+            180deg,
+            transparent 0,
+            transparent 2px,
+            rgba(0, 0, 0, 0.28) 3px,
+            transparent 4px
+        );
 }
 
 .briefing-overlay.is-visible {
@@ -543,8 +644,33 @@ progress::-moz-progress-bar {
 .briefing-card {
     width: min(860px, 100%);
     padding: 16px;
-    border: 1px solid var(--line-strong);
-    box-shadow: var(--shadow);
+    border: 1px solid rgba(155, 255, 138, 0.28);
+    background:
+        radial-gradient(ellipse at 50% 10%, rgba(255, 255, 255, 0.035), transparent 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(155, 255, 138, 0.05), transparent 62%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.1));
+    box-shadow:
+        0 14px 42px rgba(0, 0, 0, 0.65),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+        inset 0 0 100px rgba(0, 0, 0, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.briefing-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.35) 0,
+        rgba(0, 0, 0, 0.35) 1px,
+        rgba(255, 255, 255, 0.01) 2px,
+        transparent 3px
+    );
+    mix-blend-mode: overlay;
 }
 
 .briefing-card h1 {
@@ -592,12 +718,12 @@ progress::-moz-progress-bar {
 .briefing-result {
     margin-top: 14px;
     padding: 12px;
-    border: 1px solid var(--line);
-    background: rgba(8, 11, 8, 0.98);
+    border: 1px dotted rgba(155, 255, 138, 0.2);
+    background: rgba(0, 0, 0, 0.14);
 }
 
 .briefing-result-lead {
-    color: #f0f3ec;
+    color: rgba(220, 255, 210, 0.96);
     font-size: 1.02rem;
     line-height: 1.5;
 }
@@ -619,11 +745,21 @@ progress::-moz-progress-bar {
     }
 
     .app-shell {
-        height: auto;
+        min-height: auto;
+        padding: 18px 12px;
     }
 
     .terminal {
         height: auto;
+    }
+
+    .crt-screen {
+        height: auto;
+    }
+
+    .machine-shell {
+        height: auto;
+        padding: 24px 20px 28px;
     }
 
     .workspace {
@@ -644,9 +780,11 @@ progress::-moz-progress-bar {
         padding: 10px;
     }
 
-    .terminal {
+    .machine-shell {
         width: calc(100vw - 20px);
         height: auto;
+        padding: 18px 14px 22px;
+        border-radius: 22px 22px 34px 34px;
     }
 
     .terminal-header {

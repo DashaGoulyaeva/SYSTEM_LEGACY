@@ -21,6 +21,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 - `Gameplay Engineer`: changes game logic, balance, and state flow.
 - `UI Engineer`: changes layout, visuals, interaction, and presentation.
 - `Narrative Integrator`: adjusts log voice, pacing, labels, and story-facing text.
+- `Language Editor`: отвечает за имена, подписи, копирайт и терминологическую консистентность видимых русских текстов, не затрагивая геймплей или верстку.
 - `QA / Bug Hunter`: reproduces bugs, hunts regressions, and checks edge cases.
 - `Test Designer`: designs smoke checks, regression cases, and expected outcomes.
 - `Reviewer`: reviews changes for bugs, risk, and missing validation.
@@ -37,6 +38,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 - Do not ask one role to both invent the change and approve it.
 - Use the smallest role set that can finish the job safely.
 - If a task crosses code, docs, and internal memory, split the task instead of mixing outputs.
+- Нормализацию текста вести отдельным потоком, не смешивая с UX или геймплеем.
 
 ## Obsidian And GitHub
 
@@ -51,6 +53,7 @@ Use `Lead Codex` as the default coordinating role for every new task unless the 
 ## Language Policy
 
 - Anything the user should see must be written in Russian.
+- Видимые русские тексты обязаны проходить проверку через `russian-proofreader`.
 - Temporary/internal reasoning and archival working notes may be in English.
 - Avoid translating back and forth unless explicitly requested.
 
@@ -69,6 +72,7 @@ Use a skill when it matches the work.
 - `Safe Refactor Planner` for low-risk structural cleanup.
 - `Release Gate` for readiness checks before a release or visible handoff.
 - `Narrative Signal Integrator` for story tone and signal work.
+- `Russian Proofreader` для проверки пользовательских русских текстов.
 
 If a skill applies, prefer its workflow instead of inventing a new one.
 
@@ -88,6 +92,10 @@ Use the lightest process that can still be safe.
 - Every change needs a validation step.
 - Validation can be a smoke check, a review pass, a test design pass, or a manual verification note depending on the task.
 - Do not hand off unvalidated work unless the task is explicitly exploratory.
+
+## Terminology Consistency
+
+- В логах и UI терминология должна совпадать; не смешивать `ошибка` и `сбой` для одной и той же пользовательской сущности.
 
 ## Current Constraint
 

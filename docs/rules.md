@@ -9,6 +9,8 @@
 ## Language
 
 - User-visible outputs must be in Russian.
+- Нормализацию текста вести отдельным потоком, не смешивая с UX или геймплеем.
+- Видимые русские тексты обязаны проходить проверку через `russian-proofreader`.
 - Internal reasoning and archive-only notes may be in English.
 - Do not translate unless it is explicitly needed.
 - Obsidian notes may be auto-normalized by a separate beautification automation; do not treat added tags, links, or formatting as a conflict by default.

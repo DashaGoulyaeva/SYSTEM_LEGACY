@@ -56,9 +56,9 @@
 
 - Агентная система разработки: [AGENTS.md](./AGENTS.md)
 - Процессные доки: [docs/README.md](./docs/README.md)
-- Дневник разработки: [DEVLOG_RU.md](./DEVLOG_RU.md)
+- Дневник разработки: [docs/logs/DEVLOG_RU.md](./docs/logs/DEVLOG_RU.md)
 - Английский readme: [README.md](./README.md)
-- Английский devlog: [DEVLOG.md](./DEVLOG.md)
+- Английский devlog: [docs/logs/DEVLOG.md](./docs/logs/DEVLOG.md)
 
 Если тебе близка такая терминальная эстетика, просто присядь и какое-то время смотри в журнал.
 Именно там игра и начинается.

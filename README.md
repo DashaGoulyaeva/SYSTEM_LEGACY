@@ -56,9 +56,9 @@ Right now the main goal is to make the first layer work as an actual game loop:
 
 - Agent system: [AGENTS.md](./AGENTS.md)
 - Process docs: [docs/README.md](./docs/README.md)
-- Development log: [DEVLOG.md](./DEVLOG.md)
+- Development log: [docs/logs/DEVLOG.md](./docs/logs/DEVLOG.md)
 - Russian readme: [README_RU.md](./README_RU.md)
-- Russian devlog: [DEVLOG_RU.md](./DEVLOG_RU.md)
+- Russian devlog: [docs/logs/DEVLOG_RU.md](./docs/logs/DEVLOG_RU.md)
 
 If the terminal aesthetic resonates with you, take a seat and watch the log for a while.
 That is where the game really starts.

@@ -9,4 +9,4 @@ This folder explains how the agent system works inside the repo.
 - [Workflow](./workflow.md)
 - [Skills](./skills.md)
 - [Resource Strategy](./resource-strategy.md)
-
+- Logs: [DEVLOG](./logs/DEVLOG.md), [DEVLOG_RU](./logs/DEVLOG_RU.md)
